@@ -4,14 +4,12 @@ A cozy, beginner friendly language with systems capabilities
 
 ## Installation
 
-You will need Zig 0.13.0 or above.
+You will need Zig 0.16.0
 
 ```bash
-zig build
+zig build -Doptimize=ReleaseFast
 
 # the result should be in zig-out/bin
-```
-```
 ```
 
 ## License
