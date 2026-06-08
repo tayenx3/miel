@@ -14,11 +14,6 @@
 
 #define CASE_TO_STR(a) case a: return #a
 
-#define SIMPLE_ERR(msg) return (result_t){\
-    .is_ok = false,\
-    .payload = { .err = strdup(msg) }\
-}
-
 #define DECL_VEC(item_type, name) \
 typedef struct {\
     item_type* data;\
@@ -102,6 +97,16 @@ typedef struct result {
         char* err;
     } payload;
 } result_t;
+
+#define SIMPLE_ERR(msg) return (result_t){\
+    .is_ok = false,\
+    .payload = { .err = strdup(msg) }\
+}
+
+#define NONE (result_t){\
+    .is_ok = false,\
+    .payload = { .err = NULL }\
+}
 
 char* op_to_str(operator_t* op);
 void empty_destroy(void* _);
