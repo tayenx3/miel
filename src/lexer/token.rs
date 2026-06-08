@@ -6,6 +6,7 @@ pub enum TokenKind {
     Identifier(lasso::Spur),
     Operator(Operator),
     LParen, RParen, LCurly, RCurly,
+    Colon, CColon,
     KwProc, KwFunc, KwCallable
 }
 

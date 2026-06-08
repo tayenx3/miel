@@ -5,7 +5,7 @@ use crate::common::{Operator, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 
 pub fn tokenize(source_id: usize, source: &str, rodeo: &mut lasso::Rodeo) -> Result<Vec<Token>, Diagnostic<usize>> {
-    let mut source_chars = source.char_indices();
+    let mut source_chars = source.char_indices().peekable();
     let mut tokens = Vec::new();
 
     while let Some((start, ch)) = source_chars.next() {
@@ -47,6 +47,18 @@ pub fn tokenize(source_id: usize, source: &str, rodeo: &mut lasso::Rodeo) -> Res
                 kind: TokenKind::RCurly,
                 span: Span { start, end: start + ch.len_utf8(), source_id }
             }),
+            ':' => if let Some(&(pos, ':')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::CColon,
+                    span: Span { start, end: pos + ':'.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Colon,
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
             '0'..='9' => {
                 let mut end: usize = start + 1;
                 let mut is_float = false;
