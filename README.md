@@ -14,7 +14,7 @@ You're probably better off with Rust, Odin or Jai.
 Prerequisites:
 
 - Rust (install through https://rustup.rs)
-- Visual Build Tools (for Rust, should be prompted for when installing Rust)
+- Visual Studio Build Tools (for Rust, should be prompted for when installing Rust)
 - Git (install through https://git-scm.com)
 
 ```bash
