@@ -1,6 +1,27 @@
 # Miel
 
+![status: 0.0.1 Pre-Alpha](https://shields.io/badge/status-0.0.1%20Pre--Alpha-purple)
+
+> **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. It lacks a lot of documentation and features
+
 A cozy systems programming language.
+
+```haskell
+func Add :: callable(a: int, b: int): int {
+    a + b
+}
+
+proc Main :: callable() {
+    x := 5                  ;; type inference
+    y: int = 10             ;; explicit typing
+    z := Add(x, Add(5, y))
+
+    data: box([u8; 1024]) = box([0; 1024])
+    ;; affine types ensure memory safety
+    SomeOperation(data)
+    SomeOperation(data)     ;; error: `data` was already moved
+}
+```
 
 ## Why Miel?
 
