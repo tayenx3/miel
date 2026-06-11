@@ -2,7 +2,7 @@
 
 ![status: 0.0.1 Pre-Alpha](https://shields.io/badge/status-0.0.1%20Pre--Alpha-purple)
 
-> **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. It lacks a lot of documentation and features
+> **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. Syntax can change and documentation is nonexistent. Now is the perfect time to get involved to help Miel stabilize.
 
 A cozy systems programming language.
 
@@ -16,7 +16,7 @@ proc Main :: callable() {
     y: int = 10             ;; explicit typing
     z := Add(x, Add(5, y))
 
-    data: box([u8; 1024]) = box([0; 1024])
+    data: box [u8; 1024] = box([0; 1024])
     ;; affine types ensure memory safety
     SomeOperation(data)
     SomeOperation(data)     ;; error: `data` was already moved
