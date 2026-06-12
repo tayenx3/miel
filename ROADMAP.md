@@ -1,6 +1,6 @@
 # The Miel Roadmap
 
-## 0.1.0-alpha
+## 0.1.0 Alpha
 
 - [ ] Basic Compiler Core
   - [x] Lexer
@@ -10,4 +10,88 @@
     - [ ] Code Generation
     - [ ] Optimization Passes
   - [ ] Native Machine Code Generation
-- [ ] Core Language Features (variables, callables, if-else, while, strings, arrays)
+- [ ] Core Language Features
+  - [ ] Comments (`;; ...`, `;[ ... ]`)
+  - [ ] Type System Core
+    - [ ] Basic Primitive Types
+      - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
+      - [x] Floats (`float`, `f32`, `f64`)
+      - [ ] Booleans
+      - [ ] String Slices
+      - [ ] Result Type (`T ! E`)
+      - [ ] Box (`box T`)
+      - [ ] Reference (`&T`)
+    - [ ] Type Inference
+    - [x] Constants (::) with compile-time eval
+  - [ ] Memory Management
+    - [ ] Stack Allocation (Variables)
+    - [ ] `box T` Heap Allocation
+    - [ ] Dereference (`*ptr`)
+  - [ ] Functions
+    - [x] Callable Type Syntax
+    - [ ] Parameters and Return Values
+    - [ ] Function Calls
+    - [ ] Multiple Functions
+  - [ ] Control Flow
+    - [ ] If/else Conditionals
+    - [ ] While Loops
+    - [ ] Return
+    - [ ] Break/Continue
+
+## 0.2.0-0.5.0 Alpha
+
+- [ ] Structs and Enums
+- [ ] Generics/Polymorphism
+- [ ] Permission System
+  - [ ] `Root` Permission
+  - [ ] Custom Permission Definitions
+  - [ ] `@Permission` Syntax
+  - [ ] `acquire`/`release` Syntax
+  - [ ] Permission Checking Pass
+- [ ] Iterators
+  - [ ] Iterator Definition API (not decided on yet)
+  - [ ] Ranges
+  - [ ] For Loops
+- [ ] Module System
+  - [ ] Basic Imports
+  - [ ] Circular Imports
+- [ ] Basic Standard Library
+  - [ ] I/O
+    - [ ] `Print`/`PrintLn` Functions
+    - [ ] `EPrint`/`EPrintLn` Functions
+    - [ ] `ReadLine` Function
+    - [ ] `IoWrite` Permission
+    - [ ] `IoRead` Permission
+  - [ ] Collections
+    - [ ] `Vec` Type
+    - [ ] `Map` Type
+    - [ ] `Set` Type
+  - [ ] Strings
+    - [ ] `String` Type (for growable strings)
+    - [ ] `CString` Type (for growable, null-terminated strings)
+  - [ ] Time
+    - [ ] `TimePoint` Type
+    - [ ] `TimeFrame` Type
+    - [ ] `TimeGet` Permission
+  - [ ] File System
+    - [ ] `File` Type
+    - [ ] `ReadString`/`ReadBytes` Functions
+    - [ ] `WriteString`/`WriteBytes` Functions
+    - [ ] `Exists` Function
+    - [ ] `Delete` Function
+    - [ ] `FsRead` Permission
+    - [ ] `FsWrite` Permission
+    - [ ] `FsOpen` Permission
+    - [ ] `FsDelete` Permission
+  - [ ] Random
+    - [ ] `RandInt`/`RandRange`
+    - [ ] `RandomGen` Permission
+  - [ ] Math
+    - [ ] Float Operations
+    - [ ] Float Constants (Euler's Number, )
+- [ ] Concurrency Basics
+  - [ ] `spawn` keyword (goroutine/fiber style)
+  - [ ] Channels (`chan T` type)
+- [ ] Cross-Compilation
+  - [ ] Target Triples (Windows/Linux/macOS)
+  - [ ] `--target` Flag
