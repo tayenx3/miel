@@ -7,7 +7,7 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
     let mut source_chars = source.char_indices().peekable();
     let mut tokens = Vec::new();
 
-    while let Some((start, ch)) = source_chars.next() {
+    'outer: while let Some((start, ch)) = source_chars.next() {
         match ch {
             ' ' | '\t' | '\n' | '\r' => continue,
             ';' => if let Some((_, ';')) = source_chars.peek() {
@@ -145,6 +145,7 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                             kind: TokenKind::StringLit(&source[(start + 1)..pos]),
                             span: Span { start, end, source_id }
                         });
+                        continue 'outer;
                     }
                 }
                 return Err(Diag::error()
