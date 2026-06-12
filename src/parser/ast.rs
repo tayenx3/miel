@@ -41,6 +41,10 @@ pub enum NodeKind {
         ret_ty: Option<ParsedType>,
         body: Vec<Node>
     },
+    Call {
+        callee: Box<Node>,
+        args: Vec<Node>
+    },
 
     ShortVarDecl {
         name: lasso::Spur,
@@ -56,15 +60,11 @@ pub enum NodeKind {
         name: (Option<ConstKind>, lasso::Spur),
         expr: Box<Node>,
     },
-    TypedConstDecl {
+    ConstDecl {
         name: (Option<ConstKind>, lasso::Spur),
         ty: ParsedType,
         expr: Box<Node>,
     },
-
-    // special nodes
-    Proc(lasso::Spur),
-    Func(lasso::Spur),
 }
 
 #[derive(Debug, Clone, PartialEq)]

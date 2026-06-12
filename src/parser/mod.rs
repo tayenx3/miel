@@ -150,7 +150,24 @@ impl<'p> Parser<'p> {
                         },
                         span
                     );
-                }
+                },
+                TokenKind::LParen => {
+                    self.advance();
+                    let mut args = Vec::new();
+                    while let Some(tok) = self.tokens.get(self.pos) {
+                        if tok.kind == TokenKind::RParen { break }
+                        args.push(self.parse_expression(0)?);
+                        if self.expect(TokenKind::Comma).is_err() { break }
+                    }
+                    let span = tok.span.concat(&self.expect(TokenKind::RParen)?.span);
+                    lhs = self.create_node(
+                        NodeKind::Call {
+                            callee: Box::new(lhs),
+                            args,
+                        },
+                        span
+                    );
+                },
                 _ => break,
             }
         }
@@ -198,24 +215,6 @@ impl<'p> Parser<'p> {
                         op: *op,
                         operand: Box::new(operand)
                     },
-                    span
-                ))
-            },
-            TokenKind::KwProc => {
-                self.advance();
-                let (name, name_span) = self.expect_ident()?;
-                let span = tok.span.concat(&name_span);
-                Ok(self.create_node(
-                    NodeKind::Proc(name),
-                    span
-                ))
-            },
-            TokenKind::KwFunc => {
-                self.advance();
-                let (name, name_span) = self.expect_ident()?;
-                let span = tok.span.concat(&name_span);
-                Ok(self.create_node(
-                    NodeKind::Func(name),
                     span
                 ))
             },
@@ -371,7 +370,7 @@ impl<'p> Parser<'p> {
                 let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                 span = span.concat(&expr.span);
                 Ok(self.create_node(
-                    NodeKind::TypedConstDecl {
+                    NodeKind::ConstDecl {
                         name: (const_kind, name),
                         ty,
                         expr: Box::new(expr)
@@ -397,8 +396,9 @@ impl<'p> Parser<'p> {
                     let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                     span = span.concat(&expr.span);
                     Ok(self.create_node(
-                        NodeKind::ShortConstDecl {
+                        NodeKind::ConstDecl {
                             name: (const_kind, name),
+                            ty,
                             expr: Box::new(expr)
                         },
                         span
