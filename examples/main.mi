@@ -1,5 +1,7 @@
-func Add :: callable(a: int, b: int): int { a + b }
+Add :: callable(a: int, b: int): int { a + b }
 
-proc Main :: callable() {
+;; this is a comment
+
+Main :: callable() {
     result := Add(5, 3)
 }

@@ -10,16 +10,16 @@ A cozy systems programming language.
 ```haskell
 #Import "std/fs.mi"
 
-func Add :: callable(a: int, b: int): int {
+Add :: callable(a: int, b: int): int {
     a + b
 }
 
 ;; permission types help prove secure data access at compile-time
-func ReadFileToString :: callable(path: strbuf): strbuf @fs.FsRead {
+ReadFileToString :: callable(path: strbuf): strbuf @fs.FsRead {
     ;; read file
 }
 
-proc Main :: callable() @Root {
+Main :: callable() @Root {
     x := 5                  ;; type inference
     y: int = 10             ;; explicit typing
     z := Add(x, Add(5, y))

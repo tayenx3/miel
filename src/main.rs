@@ -2,13 +2,14 @@ mod cli;
 mod common;
 mod lexer;
 mod parser;
+mod sema;
 
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::ColorSpec;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self, Chars, Config, Styles};
 use colored::Colorize;
-use common::Context;
+use common::{Context, ContextMut};
 use std::{env, fs};
 
 const STATUS: &'static str = "Pre-Alpha";
@@ -113,6 +114,7 @@ fn main() {
             return;
         }
     };
+    
     let ctx = Context {
         rodeo: &rodeo,
         source_id: file_id,
@@ -124,5 +126,20 @@ fn main() {
             return;
         }
     };
-    println!("{ast:#?}");
+    
+    let mut ctx_mut = ContextMut {
+        rodeo: &mut rodeo,
+        source_id: file_id,
+    };
+
+    let mut schecker = sema::SemaChecker::new(&mut ctx_mut);
+    match schecker.check(&ast) {
+        Ok(()) => (),
+        Err(errs) => {
+            for err in errs {
+                term::emit(&mut writer, &config, &files, &err).expect("Diagnostic formatting failed");
+            }
+            return;
+        }
+    }
 }

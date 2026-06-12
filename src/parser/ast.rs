@@ -14,11 +14,6 @@ pub struct Param {
     pub span: Span
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ConstKind {
-    Proc, Func
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
     IntLit(i64), FloatLit(f64),
@@ -57,11 +52,11 @@ pub enum NodeKind {
     },
 
     ShortConstDecl {
-        name: (Option<ConstKind>, lasso::Spur),
+        name: lasso::Spur,
         expr: Box<Node>,
     },
     ConstDecl {
-        name: (Option<ConstKind>, lasso::Spur),
+        name: lasso::Spur,
         ty: ParsedType,
         expr: Box<Node>,
     },

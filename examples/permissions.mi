@@ -1,10 +1,10 @@
 #Import "std/fs"
 
-func ReadFileToString :: callable(path: strbuf): strbuf @fs.FsRead {
+ReadFileToString :: callable(path: strbuf): strbuf @fs.FsRead {
     ;; read file
 }
 
-proc Main :: callable() @Root {
+Main :: callable() @Root {
     acquire fs.FsRead from Root
     defer release fs.FsRead ;; will throw a compile error if fs.FsRead isn't already in scope
 

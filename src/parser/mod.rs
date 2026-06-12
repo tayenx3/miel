@@ -349,88 +349,47 @@ impl<'p> Parser<'p> {
     }
 
     fn try_parse_decl(&mut self) -> Result<Node, (Diag, bool)> {
-        let (const_kind, ck_span) = match *self.expect_any_without_advance("").map_err(|err| (err, false))? {
-            Token { kind: TokenKind::Identifier(_), span } => (None, span),
-            Token { kind: TokenKind::KwProc, span } => {
-                self.advance();
-                (Some(ConstKind::Proc), span)
-            },
-            Token { kind: TokenKind::KwFunc, span } => {
-                self.advance();
-                (Some(ConstKind::Func), span)
-            },
-            _ => return Err((Diag::error(), false)),
-        };
-        let (name, n_span) = self.expect_ident().map_err(|err| (err, false))?;
-        let mut span = ck_span.concat(&n_span);
-        if const_kind.is_some() {
-            if self.expect(TokenKind::Colon).is_ok() {
-                let ty = self.parse_type().map_err(|err| (err, true))?;
-                self.expect(TokenKind::CColon).map_err(|err| (err, true))?;
+        let (name, mut span) = self.expect_ident().map_err(|err| (err, false))?;
+        if self.expect(TokenKind::Colon).is_ok() {
+            let ty = self.parse_type().map_err(|err| (err, true))?;
+            if self.expect(TokenKind::CColon).is_ok() {
                 let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                 span = span.concat(&expr.span);
                 Ok(self.create_node(
                     NodeKind::ConstDecl {
-                        name: (const_kind, name),
-                        ty,
+                        name, ty,
                         expr: Box::new(expr)
                     },
                     span
                 ))
             } else {
-                self.expect(TokenKind::CColon).map_err(|err| (err, true))?;
+                self.expect(TokenKind::Assign).map_err(|err| (err, true))?;
                 let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                 span = span.concat(&expr.span);
                 Ok(self.create_node(
-                    NodeKind::ShortConstDecl {
-                        name: (const_kind, name),
-                        expr: Box::new(expr)
-                    },
+                    NodeKind::TypedVarDecl { name, ty, expr: Box::new(expr) },
                     span
                 ))
             }
+        } else if self.expect(TokenKind::CColon).is_ok() {
+            let expr = self.parse_expression(0).map_err(|err| (err, true))?;
+            span = span.concat(&expr.span);
+            Ok(self.create_node(
+                NodeKind::ShortConstDecl {
+                    name,
+                    expr: Box::new(expr)
+                },
+                span
+            ))
         } else {
-            if self.expect(TokenKind::Colon).is_ok() {
-                let ty = self.parse_type().map_err(|err| (err, true))?;
-                if self.expect(TokenKind::CColon).is_ok() {
-                    let expr = self.parse_expression(0).map_err(|err| (err, true))?;
-                    span = span.concat(&expr.span);
-                    Ok(self.create_node(
-                        NodeKind::ConstDecl {
-                            name: (const_kind, name),
-                            ty,
-                            expr: Box::new(expr)
-                        },
-                        span
-                    ))
-                } else {
-                    self.expect(TokenKind::Assign).map_err(|err| (err, true))?;
-                    let expr = self.parse_expression(0).map_err(|err| (err, true))?;
-                    span = span.concat(&expr.span);
-                    Ok(self.create_node(
-                        NodeKind::TypedVarDecl { name, ty, expr: Box::new(expr) },
-                        span
-                    ))
-                }
-            } else if self.expect(TokenKind::CColon).is_ok() {
-                let expr = self.parse_expression(0).map_err(|err| (err, true))?;
-                span = span.concat(&expr.span);
-                Ok(self.create_node(
-                    NodeKind::ShortConstDecl {
-                        name: (const_kind, name),
-                        expr: Box::new(expr)
-                    },
-                    span
-                ))
-            } else {
-                self.expect(TokenKind::Walrus).map_err(|err| (err, false))?;
-                let expr = self.parse_expression(0).map_err(|err| (err, true))?;
-                span = span.concat(&expr.span);
-                Ok(self.create_node(
-                    NodeKind::ShortVarDecl { name, expr: Box::new(expr) },
-                    span
-                ))
-            }
+            self.expect(TokenKind::Walrus).map_err(|err| (err, false))?;
+            let expr = self.parse_expression(0).map_err(|err| (err, true))?;
+            span = span.concat(&expr.span);
+            Ok(self.create_node(
+                NodeKind::ShortVarDecl { name, expr: Box::new(expr) },
+                span
+            ))
         }
+        
     }
 }

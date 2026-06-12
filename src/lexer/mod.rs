@@ -125,8 +125,6 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     source_chars.next();
                 }
                 let kind = match &source[start..end] {
-                    "proc" => TokenKind::KwProc,
-                    "func" => TokenKind::KwFunc,
                     "callable" => TokenKind::KwCallable,
                     "nil" => TokenKind::KwNil,
                     other => TokenKind::Identifier(rodeo.get_or_intern(other))
