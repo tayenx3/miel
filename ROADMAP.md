@@ -38,7 +38,7 @@
     - [ ] Return
     - [ ] Break/Continue
 
-## 0.2.0-0.5.0 Alpha
+## 0.2.0-0.7.0 Alpha
 
 - [ ] Structs and Enums
 - [ ] Generics/Polymorphism
@@ -88,7 +88,14 @@
     - [ ] `RandomGen` Permission
   - [ ] Math
     - [ ] Float Operations
-    - [ ] Float Constants (Euler's Number, )
+    - [ ] Float Constants 
+      - [ ] Euler's Number
+      - [ ] Pi
+      - [ ] Phi
+      - [ ] Euler-Mascheroni Constant
+      - [ ] Apéry's Constant
+      - [ ] Pythagoras' Constant
+      - [ ] Catalan's Constant
 - [ ] Concurrency Basics
   - [ ] `spawn` keyword (goroutine/fiber style)
   - [ ] Channels (`chan T` type)

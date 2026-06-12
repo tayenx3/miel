@@ -1,0 +1,13 @@
+;; Before you speak to the world,
+;;      you must ask permission.
+;; Before you ask permission,
+;;      you must name your tools.
+;; Before you name your tools,
+;;      you must declare your intent.
+
+#Import "std/io"
+
+Main :: callable() @Root {
+    acquire io.IoWrite from Root
+    io.PrintLn("Hello, world!")
+}

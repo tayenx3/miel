@@ -63,7 +63,11 @@ cargo build --release
 
 Miel was created just for the joy of creation (no, not a FNAF reference).
 
-More on the philosphy at [PHILOSOPHY.md](./PHILOSOPHY.md)
+More on the philosphy at [PHILOSOPHY.md](./PHILOSOPHY.md).
+
+## Roadmap
+
+You can find the roadmap for Miel at [ROADMAP.md](./ROADMAP.md).
 
 ## License
 
