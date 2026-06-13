@@ -469,7 +469,7 @@ impl<'sch> SemaChecker<'sch> {
                             Label::secondary(lhs.span.source_id, lhs.span.start..lhs.span.end)
                                 .with_message(format!("this has type `{lty_fmt}` here")),
                             Label::secondary(rhs.span.source_id, rhs.span.start..rhs.span.end)
-                                .with_message(format!("this as type `{rty_fmt}` here")),
+                                .with_message(format!("this has type `{rty_fmt}` here")),
                         ])])
                 }
             },
