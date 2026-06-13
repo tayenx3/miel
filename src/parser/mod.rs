@@ -144,7 +144,7 @@ impl<'p> Parser<'p> {
                     let span = lhs.span.concat(&rhs.span);
                     lhs = self.create_node(
                         NodeKind::BinaryOp {
-                            op: *op,
+                            op: (*op, tok.span),
                             lhs: Box::new(lhs),
                             rhs: Box::new(rhs)
                         },
@@ -275,16 +275,17 @@ impl<'p> Parser<'p> {
         } else {
             None
         };
-        self.expect(TokenKind::LCurly)?;
+        let mut body_span = self.expect(TokenKind::LCurly)?.span;
         let mut body = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
             if tok.kind == TokenKind::RCurly { break }
             body.push(self.parse_expression(0)?);
         }
-        span = span.concat(&self.expect(TokenKind::RCurly)?.span);
+        body_span = body_span.concat(&self.expect(TokenKind::RCurly)?.span);
+        span = span.concat(&body_span);
 
         Ok(self.create_node(
-            NodeKind::Callable { params, ret_ty, body },
+            NodeKind::Callable { params, ret_ty, body: (body, body_span) },
             span
         ))
     }

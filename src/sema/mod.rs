@@ -1,9 +1,22 @@
+// For all who enter
+// this ill-begotten realm,
+// 
+// thou shalt not pass
+// and thou shalt not return.
+// 
+// Thou shalt be stuffed in this purgatory
+// 
+// 
+// forever
+// in eternity.
+
 pub mod symbol;
 pub mod ty;
 
 use std::collections::HashMap;
 use symbol::*;
 use ty::*;
+use colored::Colorize;
 use crate::parser::ast::{Ast, Node, NodeId, NodeKind, ParsedType, ParsedTypeKind};
 use crate::common::{ContextMut, Diag, Label};
 
@@ -15,11 +28,12 @@ const CANDIDATE_SCORE_THRESHOLD: f64 = 0.7;
 // each Vec<SymbolMap> represents a function's scope stack
 pub struct SemaChecker<'sch> {
     ctx: &'sch ContextMut<'sch>,
-    root_scope: ConstSymbolMap,
     scope: Vec<Vec<SymbolMap>>,
     ty_pool: TypePool,
     type_map: HashMap<NodeId, TypeId>,
     type_registry: HashMap<lasso::Spur, TypeId>,
+    constants: HashMap<NodeId, ConstId>,
+    next_constant_id: usize,
 }
 
 impl<'sch> SemaChecker<'sch> {
@@ -27,44 +41,57 @@ impl<'sch> SemaChecker<'sch> {
         let ty_pool = TypePool::new();
         let mut type_registry = HashMap::new();
         
-        type_registry.insert(ctx.rodeo.get_or_intern("int"), ty_pool.int_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("uint"), ty_pool.uint_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("i8"), ty_pool.i8_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("i16"), ty_pool.i16_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("i32"), ty_pool.i32_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("i64"), ty_pool.i64_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("u8"), ty_pool.u8_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("u16"), ty_pool.u16_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("u32"), ty_pool.u32_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("u64"), ty_pool.u64_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("float"), ty_pool.float_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("f32"), ty_pool.f32_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("f64"), ty_pool.f64_id);
-        type_registry.insert(ctx.rodeo.get_or_intern("nil"), ty_pool.nil_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("int"), ty_pool.predef_types.int_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("uint"), ty_pool.predef_types.uint_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("i8"), ty_pool.predef_types.i8_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("i16"), ty_pool.predef_types.i16_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("i32"), ty_pool.predef_types.i32_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("i64"), ty_pool.predef_types.i64_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("u8"), ty_pool.predef_types.u8_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("u16"), ty_pool.predef_types.u16_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("u32"), ty_pool.predef_types.u32_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("u64"), ty_pool.predef_types.u64_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("float"), ty_pool.predef_types.float_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("f32"), ty_pool.predef_types.f32_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("f64"), ty_pool.predef_types.f64_id);
+        type_registry.insert(ctx.rodeo.get_or_intern("nil"), ty_pool.predef_types.nil_id);
         
         Self {
             ctx,
-            root_scope: ConstSymbolMap::new(),
-            scope: Vec::new(),
+            scope: vec![vec![SymbolMap::new()]],
             ty_pool,
             type_map: HashMap::new(),
-            type_registry
+            type_registry,
+            constants: HashMap::new(),
+            next_constant_id: 0usize,
         }
     }
 
     pub fn check(&mut self, ast: &Ast) -> Result<(), Vec<Diag>> {
         let mut errors = Vec::new();
         for item in ast.0.iter() {
-            if let Err(errs) = self.check_root_item(item) {
-                errors.extend(errs);
+            match &item.kind {
+                NodeKind::ShortConstDecl { .. }
+                | NodeKind::ConstDecl { .. } => {
+                    if let Err(errs) = self.collect_constant(item) {
+                        errors.extend(errs);
+                    }
+                },
+                _ => errors.push(Diag::error()
+                    .with_message("Expected root-level item")
+                    .with_labels(vec![
+                        Label::primary(item.span.source_id, item.span.start..item.span.end)
+                            .with_message("invalid root-level item")
+                    ]))
             }
         }
         if !errors.is_empty() { return Err(errors) }
         for item in ast.0.iter() {
-            if let Err(errs) = self.collect_function(item) {
+            if let Err(errs) = self.check_function(item) {
                 errors.extend(errs);
             }
         }
+        if !errors.is_empty() { return Err(errors) }
         Ok(())
     }
 
@@ -91,21 +118,25 @@ impl<'sch> SemaChecker<'sch> {
                     Err(vec![Diag::error()
                         .with_message("Unknown type")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, p_ty.span.start..p_ty.span.end)
+                            Label::primary(p_ty.span.source_id, p_ty.span.start..p_ty.span.end)
                                 .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
                         ]).with_notes(vec![
-                            format!("Did you mean `{}`?", self.ctx.rodeo.resolve(c))
+                            format!(
+                                "{}: Did you mean `{}`?",
+                                "note".blue().bold().underline(),
+                                self.ctx.rodeo.resolve(c)
+                            )
                         ])])
                 } else {
                     Err(vec![Diag::error()
                         .with_message("Unknown type")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, p_ty.span.start..p_ty.span.end)
+                            Label::primary(p_ty.span.source_id, p_ty.span.start..p_ty.span.end)
                                 .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
                         ])])
                 }
             },
-            ParsedTypeKind::Nil => Ok(self.ty_pool.nil_id),
+            ParsedTypeKind::Nil => Ok(self.ty_pool.predef_types.nil_id),
             ParsedTypeKind::Tuple(items) => {
                 let mut errors = Vec::new();
                 let mut item_tys = Vec::new();
@@ -123,52 +154,92 @@ impl<'sch> SemaChecker<'sch> {
         }
     }
 
-    fn check_root_item(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
+    fn collect_constant(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
         match &item.kind {
             NodeKind::ShortConstDecl { name, expr } => {
                 let mut errors = Vec::new();
-                if let Ok((_, _, defined_at)) = self.root_scope.find_symbol(name, &self.ctx.as_ctx()) {
+                if let Ok((_, _, defined_at)) = self.scope.first().unwrap()
+                    .first().unwrap()
+                    .find_symbol(name, &self.ctx.as_ctx())
+                {
                     errors.push(Diag::error()
                         .with_message("Already defined constant")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, item.span.start..item.span.end)
+                            Label::primary(item.span.source_id, item.span.start..item.span.end)
                                 .with_message(format!(
-                                    "`{}` already defined",
+                                    "`{}` redefined here",
                                     self.ctx.rodeo.resolve(name)
                                 )),
-                            Label::secondary(self.ctx.source_id, defined_at.start..defined_at.end)
+                            Label::secondary(defined_at.source_id, defined_at.start..defined_at.end)
                                 .with_message(format!(
                                     "`{}` was defined here",
                                     self.ctx.rodeo.resolve(name)
                                 )),
+                        ]).with_notes(vec![
+                            format!(
+                                "{}: Constants cannot be redefined in the same scope",
+                                "note".blue().bold().underline()
+                            )
                         ]));
                 }
                 match self.check_node_const(expr) {
                     Ok((init_ty_id, init_val)) => {
+                        if !errors.is_empty() {
+                            return Err(errors);
+                        }
                         if !errors.is_empty() { return Err(errors) }
-                        self.root_scope.define_symbol(*name, init_ty_id, init_val, item.span)
+                        self.scope.last_mut().unwrap()
+                            .last_mut().unwrap()
+                            .define_constant(*name, init_ty_id, init_val, item.span);
+                        let const_id = ConstId(self.next_constant_id);
+                        self.next_constant_id += 1;
+                        self.constants.insert(item.id, const_id);
+                        Ok(())
                     },
                     Err(errs) => {
                         errors.extend(errs);
-                        return Err(errors);
+                        Err(errors)
                     }
                 }
-                Ok(())
             },
             NodeKind::ConstDecl { name, ty, expr } => {
                 let mut errors = Vec::new();
+                if let Ok((_, _, defined_at)) = self.scope.first().unwrap()
+                    .first().unwrap()
+                    .find_symbol(name, &self.ctx.as_ctx())
+                {
+                    errors.push(Diag::error()
+                        .with_message("Already defined constant")
+                        .with_labels(vec![
+                            Label::primary(item.span.source_id, item.span.start..item.span.end)
+                                .with_message(format!(
+                                    "`{}` redefined here",
+                                    self.ctx.rodeo.resolve(name)
+                                )),
+                            Label::secondary(defined_at.source_id, defined_at.start..defined_at.end)
+                                .with_message(format!(
+                                    "`{}` was defined here",
+                                    self.ctx.rodeo.resolve(name)
+                                )),
+                        ]).with_notes(vec![
+                            format!(
+                                "{}: Constants cannot be redefined in the same scope",
+                                "note".blue().bold().underline()
+                            )
+                        ]));
+                }
                 let resolved_ty = match self.resolve_type(ty) {
                     Ok(o) => o,
                     Err(err) => {
                         errors.extend(err);
-                        self.ty_pool.nil_id
+                        self.ty_pool.predef_types.nil_id
                     },
                 };
                 let (init_ty_id, init_val) = match self.check_node_const(expr) {
                     Ok(o) => o,
                     Err(err) => {
                         errors.extend(err);
-                        (self.ty_pool.nil_id, ConstValue::Nil)
+                        (self.ty_pool.predef_types.nil_id, ConstValue::Nil)
                     },
                 };
                 if !errors.is_empty() {
@@ -190,7 +261,7 @@ impl<'sch> SemaChecker<'sch> {
                     return Err(vec![Diag::error()
                         .with_message("Type mismatch")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, item.span.start..item.span.end)
+                            Label::primary(item.span.source_id, item.span.start..item.span.end)
                                 .with_message(format!(
                                     "expected `{}`, found `{}`",
                                     self.ty_pool.get_type(&resolved_ty)
@@ -201,54 +272,353 @@ impl<'sch> SemaChecker<'sch> {
                         ])]);
                 }
 
-                self.root_scope.define_symbol(*name, resolved_ty, init_val, item.span);
+                self.scope.last_mut().unwrap()
+                    .last_mut().unwrap()
+                    .define_constant(*name, resolved_ty, init_val, item.span);
+                let const_id = ConstId(self.next_constant_id);
+                self.next_constant_id += 1;
+                self.constants.insert(item.id, const_id);
                 Ok(())
             },
-            _ => Err(vec![Diag::error()
-                .with_message("Expected root-level item")
-                .with_labels(vec![
-                    Label::primary(self.ctx.source_id, item.span.start..item.span.end)
-                        .with_message("invalid root-level item")
-                ])])
+            _ => Ok(())
         }
     }
-    
-    fn collect_function(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
+
+    fn check_function(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
         match &item.kind {
             NodeKind::ShortConstDecl { name, expr }
             | NodeKind::ConstDecl { name, expr, .. } => {
-                if let NodeKind::Callable { params, body, .. } = &expr.kind {
+                if let NodeKind::Callable { params, body: (body, body_span), .. } = &expr.kind {
                     let mut errors = Vec::new();
                     if let Ok(Type::Callable { params: param_tys, .. })
-                        = self.root_scope.find_symbol(name, &self.ctx.as_ctx())
+                        = self.scope.last().unwrap().last().unwrap().find_symbol(name, &self.ctx.as_ctx())
                             .map(|x| self.ty_pool.get_type(x.0).unwrap())
                     {
                         let mut smap = SymbolMap::new();
                         for (p, ty) in params.iter().zip(param_tys) {
-                            smap.define_symbol(p.name, *ty);
+                            smap.define_symbol(p.name, *ty, p.span);
                         }
                         self.scope.push(vec![smap]);
                     }
                     for stmt in body {
-                        if let Err(errs) = self.check_node(stmt) {
+                        if let Err(errs) = self.collect_constant(stmt) {
                             errors.extend(errs);
                         }
                     }
                     if !errors.is_empty() { return Err(errors) }
+                    for stmt in body {
+                        if let Err(errs) = self.check_function(stmt) {
+                            errors.extend(errs);
+                        }
+                    }
+                    if !errors.is_empty() { return Err(errors) }
+                    let mut last_ty = self.ty_pool.predef_types.nil_id;
+                    for stmt in body {
+                        if let Err(errs) = self.check_node(stmt) {
+                            errors.extend(errs);
+                        } else {
+                            last_ty = self.type_map[&stmt.id];
+                        }
+                    }
+                    if !errors.is_empty() { return Err(errors) }
+                    self.scope.pop();
+                    if let Ok(Type::Callable { ret_ty, .. })
+                        = self.scope.last().unwrap().last().unwrap().find_symbol(name, &self.ctx.as_ctx())
+                            .map(|x| self.ty_pool.get_type(x.0).unwrap())
+                    {
+                        let body_ty = self.ty_pool.get_type(&last_ty).unwrap();
+                        let ret_ty = self.ty_pool.get_type(ret_ty).unwrap();
+                        if body_ty.is_coerceable_into(ret_ty) {
+                            self.ty_pool.coerce_type(&last_ty, ret_ty.clone());
+                        } else {
+                            return Err(vec![Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(
+                                        body_span.source_id,
+                                        body_span.start..body_span.end
+                                    ).with_message(format!(
+                                        "expect `{}`, found `{}`",
+                                        ret_ty.format(&self.ty_pool),
+                                        body_ty.format(&self.ty_pool)
+                                    ))
+                                ])
+                            ]);
+                        }
+                    }
                 }
                 Ok(())
             },
-            _ => Err(vec![Diag::error()
-                .with_message("Expected root-level item")
-                .with_labels(vec![
-                    Label::primary(self.ctx.source_id, item.span.start..item.span.end)
-                        .with_message("invalid root-level item")
-                ])])
+            _ => Ok(())
         }
     }
 
     fn check_node(&mut self, node: &Node) -> Result<(), Vec<Diag>> {
-        todo!()
+        match &node.kind {
+            NodeKind::IntLit(_) => {
+                let t_id = self.ty_pool.create_type(Type::AmbiguousInt);
+                self.type_map.insert(node.id, t_id);
+                Ok(())
+            },
+            NodeKind::FloatLit(_) => {
+                let t_id = self.ty_pool.create_type(Type::AmbiguousFloat);
+                self.type_map.insert(node.id, t_id);
+                Ok(())
+            },
+            NodeKind::StringLit(_) => todo!("strings"),
+            NodeKind::Identifier(i) => {
+                let candidate = match self.scope.last().unwrap()
+                    .last().unwrap()
+                    .find_symbol(i, &self.ctx.as_ctx())
+                {
+                    Ok((ty, _, _)) => {
+                        self.type_map.insert(node.id, *ty);
+                        return Ok(());
+                    },
+                    Err(c) => c,
+                };
+                match (self.scope.first().unwrap().first().unwrap().find_symbol(i, &self.ctx.as_ctx()), candidate) {
+                    (Ok((ty, ..)), _) => {
+                        self.type_map.insert(node.id, *ty);
+                        return Ok(());
+                    },
+                    (Err(Some(candidate)), Some(c)) => {
+                        // everyday i pray for the ability to name better variables
+                        let ri = self.ctx.rodeo.resolve(i);
+                        let a = self.ctx.rodeo.resolve(candidate);
+                        let a_score = strsim::jaro_winkler(a, ri);
+                        let b = self.ctx.rodeo.resolve(c);
+                        let b_score = strsim::jaro_winkler(b, self.ctx.rodeo.resolve(i));
+                        if a_score > b_score {
+                            return Err(vec![Diag::error()
+                                .with_message("Unknown identifier")
+                                .with_labels(vec![
+                                    Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        .with_message(format!("`{ri}` not in scope"))
+                                ]).with_notes(vec![
+                                    format!(
+                                        "{}: Did you mean `{a}`?",
+                                        "note".blue().bold().underline()
+                                    )
+                                ])]);
+                        } else {
+                            return Err(vec![Diag::error()
+                                .with_message("Unknown identifier")
+                                .with_labels(vec![
+                                    Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        .with_message(format!("`{ri}` not in scope"))
+                                ]).with_notes(vec![
+                                    format!(
+                                        "{}: Did you mean `{b}`?",
+                                        "note".blue().bold().underline()
+                                    )
+                                ])]);
+                        }
+                    },
+                    (Err(Some(candidate)), None)
+                    | (Err(None), Some(candidate)) => {
+                        return Err(vec![Diag::error()
+                            .with_message("Unknown identifier")
+                            .with_labels(vec![
+                                Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                    .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
+                            ]).with_notes(vec![
+                                format!(
+                                    "{}: Did you mean `{}`?",
+                                    "note".blue().bold().underline(),
+                                    self.ctx.rodeo.resolve(candidate),
+                                )
+                            ])]);
+                    },
+                    (Err(None), None) => return Err(vec![Diag::error()
+                        .with_message("Unknown identifier")
+                        .with_labels(vec![
+                            Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
+                        ])]),
+                }
+            },
+            NodeKind::Nil => {
+                self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
+                Ok(())
+            },
+            NodeKind::BinaryOp { op: (op, op_span), lhs, rhs } => {
+                let mut errors = Vec::new();
+                if let Err(errs) = self.check_node(lhs) {
+                    errors.extend(errs);
+                }
+                if let Err(errs) = self.check_node(rhs) {
+                    errors.extend(errs);
+                }
+                if !errors.is_empty() { return Err(errors) }
+                let lty = &self.type_map[&lhs.id];
+                let rty = &self.type_map[&rhs.id];
+                if let Some(ty) = op.infix_output_ty(&lty, &rty, &mut self.ty_pool) {
+                    self.type_map.insert(node.id, ty);
+                    Ok(())
+                } else {
+                    let lty_fmt = self.ty_pool.get_type(&lty)
+                        .unwrap().format(&self.ty_pool);
+                    let rty_fmt = self.ty_pool.get_type(&rty)
+                        .unwrap().format(&self.ty_pool);
+                    Err(vec![Diag::error()
+                        .with_message("Type mismatch")
+                        .with_labels(vec![
+                            Label::primary(op_span.source_id, op_span.start..op_span.end)
+                                .with_message(format!("cannot do `{op}` infix operation on types `{lty_fmt}` and `{rty_fmt}`")),
+                            Label::secondary(lhs.span.source_id, lhs.span.start..lhs.span.end)
+                                .with_message(format!("this has type `{lty_fmt}` here")),
+                            Label::secondary(rhs.span.source_id, rhs.span.start..rhs.span.end)
+                                .with_message(format!("this as type `{rty_fmt}` here")),
+                        ])])
+                }
+            },
+            NodeKind::UnaryOp { op, operand } => {
+                self.check_node(operand)?;
+                let oty = &self.type_map[&operand.id];
+                if let Some(ty) = op.prefix_output_ty(&oty, &self.ty_pool) {
+                    self.type_map.insert(node.id, ty);
+                    Ok(())
+                } else {
+                    let oty_fmt = self.ty_pool.get_type(&oty)
+                        .unwrap().format(&self.ty_pool);
+                    Err(vec![Diag::error()
+                        .with_message("Type mismatch")
+                        .with_labels(vec![
+                            Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                .with_message(format!("cannot do `{op}` prefix operation on types `{oty_fmt}`")),
+                            Label::secondary(operand.span.source_id, operand.span.start..operand.span.end)
+                                .with_message(format!("operand with type `{oty_fmt}` here")),
+                        ])])
+                }
+            },
+            NodeKind::Tuple(items) => {
+                let mut errors = Vec::new();
+                let mut item_tys = Vec::new();
+                for i in items {
+                    match self.check_node(i) {
+                        Ok(()) => item_tys.push(self.type_map[&i.id]),
+                        Err(errs) => errors.extend(errs),
+                    }
+                }
+                if !errors.is_empty() { return Err(errors) }
+                Ok(())
+            },
+            NodeKind::Callable { .. } => Ok(()),
+            NodeKind::Call { callee, args } => {
+                let mut errors = Vec::new();
+                if let Err(errs) = self.check_node(callee) {
+                    errors.extend(errs);
+                }
+                let mut arg_tys = Vec::new();
+                for arg in args {
+                    match self.check_node(arg) {
+                        Ok(()) => arg_tys.push(self.type_map.get(&arg.id).copied().unwrap()),
+                        Err(errs) => errors.extend(errs),
+                    }
+                }
+                if !errors.is_empty() { return Err(errors) }
+                let callee_ty = self.ty_pool.get_type(&self.type_map[&callee.id]).unwrap();
+                let mut coerce = HashMap::new();
+                if let Type::Callable { params, ret_ty } = callee_ty {
+                    let a_len = args.len();
+                    let p_len = params.len();
+                    if a_len != p_len {
+                        return Err(vec![Diag::error()
+                            .with_message("Invalid argument count")
+                            .with_labels(vec![
+                                Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                    .with_message(format!("expected {p_len} arguments, found {a_len}"))
+                            ])]);
+                    }
+
+                    for (idx, (arg, param)) in arg_tys.iter().zip(params).enumerate() {
+                        let aty = self.ty_pool.get_type(arg).unwrap();
+                        let pty = self.ty_pool.get_type(param).unwrap();
+                        if aty.is_coerceable_into(pty) {
+                            coerce.insert(arg, pty.clone());
+                        } else {
+                            errors.push(Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(
+                                        args[idx].span.source_id,
+                                        args[idx].span.start..args[idx].span.end
+                                    ).with_message(format!(
+                                        "parameter #{} expected `{}`, found `{}`",
+                                        idx + 1,
+                                        pty.format(&self.ty_pool),
+                                        aty.format(&self.ty_pool)
+                                    ))
+                                ]));
+                        }
+                    }
+                    if !errors.is_empty() { return Err(errors) }
+                    self.type_map.insert(node.id, *ret_ty);
+                } else {
+                    return Err(vec![Diag::error()
+                        .with_message("Calling a non-callable")
+                        .with_labels(vec![
+                            Label::primary(callee.span.source_id, callee.span.start..callee.span.end)
+                                .with_message(format!(
+                                    "type `{}` is not callable",
+                                    callee_ty.format(&self.ty_pool)
+                                ))
+                        ])]);
+                }
+                for (from, to) in coerce {
+                    self.ty_pool.coerce_type(from, to);
+                }
+                Ok(())
+            },
+            NodeKind::ShortVarDecl { name, expr } => {
+                self.check_node(expr)?;
+                let ty = self.type_map[&expr.id];
+                self.scope.last_mut().unwrap().last_mut().unwrap()
+                    .define_symbol(*name, ty, node.span);
+                self.type_map.insert(node.id, ty);
+                Ok(())
+            },
+            NodeKind::TypedVarDecl { name, ty, expr } => {
+                let mut errors = Vec::new();
+                let resolved_ty = match self.resolve_type(ty) {
+                    Ok(ty) => ty,
+                    Err(errs) => {
+                        errors.extend(errs);
+                        self.ty_pool.predef_types.nil_id
+                    },
+                };
+                if let Err(errs) = self.check_node(expr) {
+                    errors.extend(errs);
+                }
+                if !errors.is_empty() { return Err(errors) }
+                let init_ty = self.type_map[&expr.id];
+
+                let resolved_ty_data = self.ty_pool.get_type(&resolved_ty).unwrap();
+                let init_ty_data = self.ty_pool.get_type(&init_ty).unwrap();
+                if init_ty_data.is_coerceable_into(resolved_ty_data) {
+                    self.ty_pool.coerce_type(&init_ty, resolved_ty_data.clone());
+                } else {
+                    return Err(vec![Diag::error()
+                        .with_message("Type mismatch")
+                        .with_labels(vec![
+                            Label::primary(expr.span.source_id, expr.span.start..expr.span.end)
+                                .with_message(format!(
+                                    "expected `{}`, found `{}`",
+                                    resolved_ty_data.format(&self.ty_pool),
+                                    init_ty_data.format(&self.ty_pool)
+                                ))
+                        ])]);
+                }
+                
+                self.scope.last_mut().unwrap().last_mut().unwrap()
+                    .define_symbol(*name, init_ty, node.span);
+                self.type_map.insert(node.id, init_ty);
+                Ok(())
+            },
+            NodeKind::ShortConstDecl { .. }
+            | NodeKind::ConstDecl { .. } => Ok(())
+        }
     }
     
     fn check_node_const(&mut self, node: &Node) -> Result<(TypeId, ConstValue), Vec<Diag>> {
@@ -265,45 +635,98 @@ impl<'sch> SemaChecker<'sch> {
             },
             NodeKind::StringLit(_) => todo!("strings"),
             NodeKind::Identifier(i) => {
-                let (t_id, val) = match self.root_scope.find_symbol(i, &self.ctx.as_ctx()) {
-                    Ok((ty, val, _)) => (*ty, val.clone()),
-                    Err(Some(candidate)) => return Err(vec![Diag::error()
-                        .with_message("Unknown identifier")
-                        .with_labels(vec![
-                            Label::primary(self.ctx.source_id, node.span.start..node.span.end)
-                                .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
-                        ]).with_notes(vec![
-                            format!("Did you mean `{}`?", self.ctx.rodeo.resolve(candidate))
-                        ])]),
-                    Err(None) => return Err(vec![Diag::error()
-                        .with_message("Unknown identifier")
-                        .with_labels(vec![
-                            Label::primary(self.ctx.source_id, node.span.start..node.span.end)
-                                .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
-                        ])]),
+                let candidate = match self.scope.last().unwrap()
+                    .last().unwrap()
+                    .find_symbol(i, &self.ctx.as_ctx())
+                {
+                    Ok((ty, Some(val), _)) => {
+                        self.type_map.insert(node.id, *ty);
+                        return Ok((*ty, val.clone()));
+                    },
+                    Ok((_, None, _)) => None,
+                    Err(c) => c,
                 };
-                self.type_map.insert(node.id, t_id);
-                Ok((t_id, val))
+                match (self.scope.first().unwrap().first().unwrap().find_symbol(i, &self.ctx.as_ctx()), candidate) {
+                    (Ok((ty, Some(val), _)), _) => {
+                        self.type_map.insert(node.id, *ty);
+                        return Ok((*ty, val.clone()));
+                    },
+                    (Err(Some(candidate)), Some(c)) => {
+                        // everyday i pray for the ability to name better variables
+                        let ri = self.ctx.rodeo.resolve(i);
+                        let a = self.ctx.rodeo.resolve(candidate);
+                        let a_score = strsim::jaro_winkler(a, ri);
+                        let b = self.ctx.rodeo.resolve(c);
+                        let b_score = strsim::jaro_winkler(b, self.ctx.rodeo.resolve(i));
+                        if a_score > b_score {
+                            return Err(vec![Diag::error()
+                                .with_message("Unknown constant")
+                                .with_labels(vec![
+                                    Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        .with_message(format!("`{ri}` not in scope"))
+                                ]).with_notes(vec![
+                                    format!(
+                                        "{}: Did you mean `{a}`?",
+                                        "note".blue().bold().underline()
+                                    )
+                                ])]);
+                        } else {
+                            return Err(vec![Diag::error()
+                                .with_message("Unknown constant")
+                                .with_labels(vec![
+                                    Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        .with_message(format!("`{ri}` not in scope"))
+                                ]).with_notes(vec![
+                                    format!(
+                                        "{}: Did you mean `{b}`?",
+                                        "note".blue().bold().underline()
+                                    )
+                                ])]);
+                        }
+                    },
+                    (Err(Some(candidate)), None)
+                    | (Err(None), Some(candidate))
+                    | (Ok((_, None, _)), Some(candidate)) => {
+                        return Err(vec![Diag::error()
+                            .with_message("Unknown constant")
+                            .with_labels(vec![
+                                Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                    .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
+                            ]).with_notes(vec![
+                                format!(
+                                    "{}: Did you mean `{}`?",
+                                    "note".blue().bold().underline(),
+                                    self.ctx.rodeo.resolve(candidate)
+                                )
+                            ])]);
+                    },
+                    (Err(None), None) | (Ok((_, None, _)), None) => return Err(vec![Diag::error()
+                        .with_message("Unknown constant")
+                        .with_labels(vec![
+                            Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                .with_message(format!("`{}` not in scope", self.ctx.rodeo.resolve(i)))
+                        ])]),
+                }
             },
             NodeKind::Nil => {
-                let t_id = self.ty_pool.nil_id;
+                let t_id = self.ty_pool.predef_types.nil_id;
                 self.type_map.insert(node.id, t_id);
                 Ok((t_id, ConstValue::Nil))
             },
-            NodeKind::BinaryOp { op, lhs, rhs } => {
+            NodeKind::BinaryOp { op: (op, op_span), lhs, rhs } => {
                 let mut errors = Vec::new();
                 let (lty, lval) = match self.check_node_const(lhs) {
                     Ok(o) => o,
                     Err(errs) => {
                         errors.extend(errs);
-                        (self.ty_pool.nil_id, ConstValue::Nil)
+                        (self.ty_pool.predef_types.nil_id, ConstValue::Nil)
                     },
                 };
                 let (rty, rval) = match self.check_node_const(rhs) {
                     Ok(o) => o,
                     Err(errs) => {
                         errors.extend(errs);
-                        (self.ty_pool.nil_id, ConstValue::Nil)
+                        (self.ty_pool.predef_types.nil_id, ConstValue::Nil)
                     },
                 };
                 if !errors.is_empty() { return Err(errors); }
@@ -312,17 +735,19 @@ impl<'sch> SemaChecker<'sch> {
                     let result = op.eval_infix(&lval, &rval).unwrap();
                     Ok((ty, result))
                 } else {
+                    let lty_fmt = self.ty_pool.get_type(&lty)
+                        .unwrap().format(&self.ty_pool);
+                    let rty_fmt = self.ty_pool.get_type(&rty)
+                        .unwrap().format(&self.ty_pool);
                     Err(vec![Diag::error()
                         .with_message("Type mismatch")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, node.span.start..node.span.end)
-                                .with_message(format!(
-                                    "cannot do `{op}` infix operation on types `{}` and `{}`",
-                                    self.ty_pool.get_type(&lty)
-                                        .unwrap().format(&self.ty_pool),
-                                    self.ty_pool.get_type(&rty)
-                                        .unwrap().format(&self.ty_pool),
-                                ))
+                            Label::primary(op_span.source_id, op_span.start..op_span.end)
+                                .with_message(format!("cannot do `{op}` infix operation on types `{lty_fmt}` and `{rty_fmt}`")),
+                            Label::secondary(lhs.span.source_id, lhs.span.start..lhs.span.end)
+                                .with_message(format!("left-hand-side expression with type `{lty_fmt}` here")),
+                            Label::secondary(rhs.span.source_id, rhs.span.start..rhs.span.end)
+                                .with_message(format!("right-hand-side expression with type `{rty_fmt}` here")),
                         ])])
                 }
             },
@@ -333,15 +758,15 @@ impl<'sch> SemaChecker<'sch> {
                     let result = op.eval_prefix(&oval).unwrap();
                     Ok((ty, result))
                 } else {
+                    let oty_fmt = self.ty_pool.get_type(&oty)
+                        .unwrap().format(&self.ty_pool);
                     Err(vec![Diag::error()
                         .with_message("Type mismatch")
                         .with_labels(vec![
-                            Label::primary(self.ctx.source_id, node.span.start..node.span.end)
-                                .with_message(format!(
-                                    "cannot do `{op}` prefix operation on types `{}`",
-                                    self.ty_pool.get_type(&oty)
-                                        .unwrap().format(&self.ty_pool),
-                                ))
+                            Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                .with_message(format!("cannot do `{op}` prefix operation on types `{oty_fmt}`")),
+                            Label::secondary(operand.span.source_id, operand.span.start..operand.span.end)
+                                .with_message(format!("operand with type `{oty_fmt}` here")),
                         ])])
                 }
             },
@@ -375,12 +800,12 @@ impl<'sch> SemaChecker<'sch> {
                 }
                 let ret_t = match ret_ty.as_ref()
                     .map(|pty| self.resolve_type(pty))
-                    .unwrap_or(Ok(self.ty_pool.nil_id))
+                    .unwrap_or(Ok(self.ty_pool.predef_types.nil_id))
                 {
                     Ok(t) => t,
                     Err(errs) => {
                         errors.extend(errs);
-                        self.ty_pool.nil_id
+                        self.ty_pool.predef_types.nil_id
                     }
                 };
                 if !errors.is_empty() { return Err(errors) }
@@ -389,7 +814,7 @@ impl<'sch> SemaChecker<'sch> {
                         .map(|(p, ty)| (p.name, *ty))
                         .collect(),
                     ret_ty: ret_t,
-                    body: body.clone()
+                    body: body.0.clone()
                 };
                 let ty_id = self.ty_pool.create_type(Type::Callable {
                     params: param_tys,
@@ -397,10 +822,11 @@ impl<'sch> SemaChecker<'sch> {
                 });
                 Ok((ty_id, value))
             },
+            // todo: check for calls to constant functions
             _ => Err(vec![Diag::error()
                 .with_message("Unexpected non-constant expression")
                 .with_labels(vec![
-                    Label::primary(self.ctx.source_id, node.span.start..node.span.end)
+                    Label::primary(node.span.source_id, node.span.start..node.span.end)
                         .with_message("expected constant expression")
                 ])])
         }

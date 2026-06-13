@@ -4,57 +4,34 @@ use crate::parser::ast::Node;
 
 use super::ty::TypeId;
 
+#[derive(Debug)]
 pub struct SymbolMap {
     types: HashMap<lasso::Spur, TypeId>,
+    constants: HashMap<lasso::Spur, ConstValue>,
+    defined_at: HashMap<lasso::Spur, Span>
 }
 
 impl SymbolMap {
     pub fn new() -> Self {
         Self {
-            types: HashMap::new()
-        }
-    }
-    
-    pub fn define_symbol(&mut self, name: lasso::Spur, ty: TypeId) {
-        self.types.insert(name, ty);
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ConstValue {
-    Int(i64),
-    Float(f64),
-    Nil,
-    Tuple(Vec<ConstValue>),
-    Callable {
-        params: Vec<(lasso::Spur, TypeId)>,
-        ret_ty: TypeId,
-        body: Vec<Node>
-    }
-}
-
-pub struct ConstSymbolMap {
-    types: HashMap<lasso::Spur, TypeId>,
-    values: HashMap<lasso::Spur, ConstValue>,
-    defined_at: HashMap<lasso::Spur, Span>
-}
-
-impl ConstSymbolMap {
-    pub fn new() -> Self {
-        Self {
             types: HashMap::new(),
-            values: HashMap::new(),
+            constants: HashMap::new(),
             defined_at: HashMap::new(),
         }
     }
-
-    pub fn define_symbol(&mut self, name: lasso::Spur, ty: TypeId, value: ConstValue, defined_at: Span) {
+    
+    pub fn define_symbol(&mut self, name: lasso::Spur, ty: TypeId, defined_at: Span) {
         self.types.insert(name, ty);
-        self.values.insert(name, value);
         self.defined_at.insert(name, defined_at);
     }
-
-    pub fn find_symbol(&self, name: &lasso::Spur, ctx: &Context) -> Result<(&TypeId, &ConstValue, &Span), Option<&lasso::Spur>> {
+    
+    pub fn define_constant(&mut self, name: lasso::Spur, ty: TypeId, val: ConstValue, defined_at: Span) {
+        self.types.insert(name, ty);
+        self.constants.insert(name, val);
+        self.defined_at.insert(name, defined_at);
+    }
+    
+    pub fn find_symbol(&self, name: &lasso::Spur, ctx: &Context) -> Result<(&TypeId, Option<&ConstValue>, &Span), Option<&lasso::Spur>> {
         // this already checks if `name` is in scope or not
         let mut ty = None;
         let mut candidate = None;
@@ -77,10 +54,27 @@ impl ConstSymbolMap {
         match ty {
             Some(t) => Ok((
                 t,
-                &self.values[name],
+                self.constants.get(name),
                 &self.defined_at[name],
             )),
             None => Err(candidate)
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ConstId(pub usize);
+
+#[derive(Debug, Clone)]
+#[allow(unused)]
+pub enum ConstValue {
+    Int(i64),
+    Float(f64),
+    Nil,
+    Tuple(Vec<ConstValue>),
+    Callable {
+        params: Vec<(lasso::Spur, TypeId)>,
+        ret_ty: TypeId,
+        body: Vec<Node>
     }
 }

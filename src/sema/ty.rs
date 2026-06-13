@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-// ohno
-pub struct TypePool {
-    types: HashMap<TypeId, Type>,
-    next_id: usize,
-    
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PreDefinedTypes {
     pub int_id: TypeId,
     pub uint_id: TypeId,
     pub i8_id: TypeId,
@@ -19,6 +16,14 @@ pub struct TypePool {
     pub f32_id: TypeId,
     pub f64_id: TypeId,
     pub nil_id: TypeId,
+}
+
+// ohno
+pub struct TypePool {
+    types: HashMap<TypeId, Type>,
+    next_id: usize,
+    
+    pub predef_types: PreDefinedTypes,
 }
 
 impl TypePool {
@@ -84,12 +89,13 @@ impl TypePool {
 
         Self {
             types, next_id,
-            
-            int_id, uint_id,
-            i8_id, i16_id, i32_id, i64_id,
-            u8_id, u16_id, u32_id, u64_id,
-            float_id, f32_id, f64_id,
-            nil_id
+            predef_types: PreDefinedTypes {
+                int_id, uint_id,
+                i8_id, i16_id, i32_id, i64_id,
+                u8_id, u16_id, u32_id, u64_id,
+                float_id, f32_id, f64_id,
+                nil_id
+            },
         }
     }
     
@@ -101,6 +107,7 @@ impl TypePool {
     }
 
     pub fn coerce_type(&mut self, from: &TypeId, to: Type) {
+        debug_assert!(self.types.contains_key(from));
         *self.types.get_mut(from).unwrap() = to;
     }
 
@@ -178,7 +185,7 @@ impl Type {
             Self::U16 => "u16".to_string(),
             Self::U32 => "u32".to_string(),
             Self::U64 => "u16".to_string(),
-            Self::AmbiguousFloat => "float".to_string(),
+            Self::AmbiguousFloat => "<float>".to_string(),
             Self::Float => "float".to_string(),
             Self::F32 => "f32".to_string(),
             Self::F64 => "f64".to_string(),

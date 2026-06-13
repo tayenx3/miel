@@ -21,7 +21,7 @@ pub enum NodeKind {
     Identifier(lasso::Spur),
     Nil,
     BinaryOp {
-        op: Operator,
+        op: (Operator, Span),
         lhs: Box<Node>,
         rhs: Box<Node>,
     },
@@ -34,7 +34,7 @@ pub enum NodeKind {
     Callable {
         params: Vec<Param>,
         ret_ty: Option<ParsedType>,
-        body: Vec<Node>
+        body: (Vec<Node>, Span)
     },
     Call {
         callee: Box<Node>,

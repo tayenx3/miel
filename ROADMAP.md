@@ -1,5 +1,9 @@
 # The Miel Roadmap
 
+## Where we are now
+
+We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
+
 ## 0.1.0 Alpha
 
 - [ ] Basic Compiler Core
@@ -18,11 +22,11 @@
       - [x] Floats (`float`, `f32`, `f64`)
       - [ ] Booleans
       - [ ] String Slices
-      - [ ] Result Type (`T ! E`)
+      - [ ] Result (`T ! E`)
       - [ ] Box (`box T`)
-      - [ ] Reference (`&T`)
+      - [ ] Pointer (`*T`)
     - [ ] Type Inference
-    - [x] Constants (::) with compile-time eval
+    - [x] Constants with Compile-time Evaluation
   - [ ] Memory Management
     - [ ] Stack Allocation (Variables)
     - [ ] `box T` Heap Allocation
@@ -38,10 +42,13 @@
     - [ ] Return
     - [ ] Break/Continue
 
-## 0.2.0-0.7.0 Alpha
+## 0.2.0 Alpha-0.7.0 Beta
 
 - [ ] Structs and Enums
 - [ ] Generics/Polymorphism
+- [ ] Affine Types
+  - [ ] Affine Protection
+  - [ ] `#affine` Directive
 - [ ] Permission System
   - [ ] `Root` Permission
   - [ ] Custom Permission Definitions
@@ -56,24 +63,24 @@
   - [ ] Basic Imports
   - [ ] Circular Imports
 - [ ] Basic Standard Library
-  - [ ] I/O
+  - [ ] I/O (`std/io`)
     - [ ] `Print`/`PrintLn` Functions
     - [ ] `EPrint`/`EPrintLn` Functions
     - [ ] `ReadLine` Function
     - [ ] `IoWrite` Permission
     - [ ] `IoRead` Permission
-  - [ ] Collections
+  - [ ] Collections (`std/collections`)
     - [ ] `Vec` Type
     - [ ] `Map` Type
     - [ ] `Set` Type
-  - [ ] Strings
+  - [ ] Strings (`std/str`)
     - [ ] `String` Type (for growable strings)
     - [ ] `CString` Type (for growable, null-terminated strings)
-  - [ ] Time
+  - [ ] Time (`std/time`)
     - [ ] `TimePoint` Type
     - [ ] `TimeFrame` Type
     - [ ] `TimeGet` Permission
-  - [ ] File System
+  - [ ] File System (`std/fs`)
     - [ ] `File` Type
     - [ ] `ReadString`/`ReadBytes` Functions
     - [ ] `WriteString`/`WriteBytes` Functions
@@ -83,10 +90,10 @@
     - [ ] `FsWrite` Permission
     - [ ] `FsOpen` Permission
     - [ ] `FsDelete` Permission
-  - [ ] Random
+  - [ ] Random (`std/rand`)
     - [ ] `RandInt`/`RandRange`
     - [ ] `RandomGen` Permission
-  - [ ] Math
+  - [ ] Math (`std/math`)
     - [ ] Float Operations
     - [ ] Float Constants 
       - [ ] Euler's Number
