@@ -15,14 +15,13 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] Optimization Passes
   - [ ] Native Machine Code Generation
 - [ ] Core Language Features
-  - [ ] Comments (`;; ...`, `;[ ... ]`)
+  - [x] Comments (`;; ...`, `;[ ... ]`)
   - [ ] Type System Core
     - [ ] Basic Primitive Types
       - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
       - [x] Floats (`float`, `f32`, `f64`)
       - [ ] Booleans
       - [ ] String Slices
-      - [ ] Result (`T ! E`)
       - [ ] Box (`box T`)
       - [ ] Pointer (`*T`)
     - [ ] Type Inference
@@ -42,19 +41,27 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] Return
     - [ ] Break/Continue
 
-## 0.2.0 Alpha-0.7.0 Beta
+## 0.2.0 Alpha
 
 - [ ] Structs and Enums
-- [ ] Generics/Polymorphism
-- [ ] Affine Types
-  - [ ] Affine Protection
-  - [ ] `#affine` Directive
+- [ ] Result (`T ! E`)
+  - [ ] Error Propagation
+  - [ ] Expect/Unwrap
+  - [ ] Map Ok
+  - [ ] Map Err
 - [ ] Permission System
   - [ ] `Root` Permission
   - [ ] Custom Permission Definitions
   - [ ] `@Permission` Syntax
   - [ ] `acquire`/`release` Syntax
+- [ ] Affine Types
+  - [ ] Affine Protection
+  - [ ] `#affine` Directive
   - [ ] Permission Checking Pass
+
+## 0.3.0 Alpha-0.7.0 Beta
+
+- [ ] Generics/Polymorphism
 - [ ] Iterators
   - [ ] Iterator Definition API (not decided on yet)
   - [ ] Ranges
