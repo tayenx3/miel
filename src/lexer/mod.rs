@@ -3,6 +3,30 @@ pub mod token;
 use token::*;
 use crate::common::{Operator, Span, Diag, Label};
 
+fn skip_block_comment(
+    source_id: usize,
+    source_chars: &mut std::iter::Peekable<std::str::CharIndices>,
+    start: usize
+) -> Result<(), Diag> {
+    let mut end = start + 1;
+    while let Some((pos, ch)) = source_chars.next() {
+        end = pos + ch.len_utf8();
+        if ch == ';' && let Some((_, '[')) = source_chars.peek() {
+            source_chars.next();
+            skip_block_comment(source_id, source_chars, pos)?;
+        }
+        if ch == ']' {
+            return Ok(());
+        }
+    }
+    Err(Diag::error()
+        .with_message(format!("Unterminated block comment"))
+        .with_labels(vec![
+            Label::primary(source_id, start..end)
+                .with_message("unterminated block comment")
+        ]))
+}
+
 pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Rodeo) -> Result<Vec<Token<'lex>>, Diag> {
     let mut source_chars = source.char_indices().peekable();
     let mut tokens = Vec::new();
@@ -14,6 +38,9 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                 while let Some((_, ch)) = source_chars.next() {
                     if ch == '\n' { break }
                 }
+            } else if let Some((_, '[')) = source_chars.peek() {
+                source_chars.next();
+                skip_block_comment(source_id, &mut source_chars, start)?;
             } else {
                 tokens.push(Token {
                     kind: TokenKind::Semicolon,

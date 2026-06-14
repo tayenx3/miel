@@ -1,0 +1,8 @@
+;; comment
+
+;[
+    block comment
+    ;[
+        nested block comment
+    ]
+]
