@@ -34,6 +34,7 @@ pub enum NodeKind {
     Callable {
         params: Vec<Param>,
         ret_ty: Option<ParsedType>,
+        sig_span: Span,
         body: (Vec<Node>, Span)
     },
     Call {

@@ -7,16 +7,16 @@ fn skip_block_comment(
     source_id: usize,
     source_chars: &mut std::iter::Peekable<std::str::CharIndices>,
     start: usize
-) -> Result<(), Diag> {
+) -> Result<usize, Diag> {
     let mut end = start + 1;
     while let Some((pos, ch)) = source_chars.next() {
         end = pos + ch.len_utf8();
         if ch == ';' && let Some((_, '[')) = source_chars.peek() {
             source_chars.next();
-            skip_block_comment(source_id, source_chars, pos)?;
+            end = skip_block_comment(source_id, source_chars, pos)? + ']'.len_utf8();
         }
         if ch == ']' {
-            return Ok(());
+            return Ok(end);
         }
     }
     Err(Diag::error()

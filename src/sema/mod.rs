@@ -288,7 +288,7 @@ impl<'sch> SemaChecker<'sch> {
         match &item.kind {
             NodeKind::ShortConstDecl { name, expr }
             | NodeKind::ConstDecl { name, expr, .. } => {
-                if let NodeKind::Callable { params, body: (body, body_span), .. } = &expr.kind {
+                if let NodeKind::Callable { params, sig_span, body: (body, body_span), .. } = &expr.kind {
                     let mut errors = Vec::new();
                     if let Ok(Type::Callable { params: param_tys, .. })
                         = self.scope.last().unwrap().last().unwrap().find_symbol(name, &self.ctx.as_ctx())
@@ -338,10 +338,14 @@ impl<'sch> SemaChecker<'sch> {
                                         body_span.source_id,
                                         body_span.start..body_span.end
                                     ).with_message(format!(
-                                        "expect `{}`, found `{}`",
+                                        "expected `{}`, found `{}`",
                                         ret_ty.format(&self.ty_pool),
                                         body_ty.format(&self.ty_pool)
-                                    ))
+                                    )),
+                                    Label::secondary(
+                                        sig_span.source_id,
+                                        sig_span.start..sig_span.end
+                                    ).with_message("signature was defined here")
                                 ])
                             ]);
                         }
@@ -789,7 +793,7 @@ impl<'sch> SemaChecker<'sch> {
                     ConstValue::Tuple(item_vals)
                 ))
             },
-            NodeKind::Callable { params, ret_ty, body } => {
+            NodeKind::Callable { params, ret_ty, body, .. } => {
                 let mut errors = Vec::new();
                 let mut param_tys = Vec::new();
                 for p in params {

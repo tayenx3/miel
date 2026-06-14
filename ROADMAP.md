@@ -7,8 +7,8 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
 ## 0.1.0 Alpha
 
 - [ ] Basic Compiler Core
-  - [x] Lexer
-  - [x] Parser
+  - [ ] Lexer
+  - [ ] Parser
   - [ ] Semantic Analysis
   - [ ] IR
     - [ ] Code Generation

@@ -268,13 +268,16 @@ impl<'p> Parser<'p> {
             params.push(self.parse_param()?);
             if self.expect(TokenKind::Comma).is_err() { break }
         }
-        self.expect(TokenKind::RParen)?;
+        span = span.concat(&self.expect(TokenKind::RParen)?.span);
         let ret_ty = if let Some(Token { kind: TokenKind::Colon, .. }) = self.tokens.get(self.pos) {
             self.advance();
-            Some(self.parse_type()?)
+            let ty = self.parse_type()?;
+            span = span.concat(&ty.span);
+            Some(ty)
         } else {
             None
         };
+        let sig_span = span;
         let mut body_span = self.expect(TokenKind::LCurly)?.span;
         let mut body = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
@@ -285,7 +288,7 @@ impl<'p> Parser<'p> {
         span = span.concat(&body_span);
 
         Ok(self.create_node(
-            NodeKind::Callable { params, ret_ty, body: (body, body_span) },
+            NodeKind::Callable { params, ret_ty, sig_span, body: (body, body_span) },
             span
         ))
     }
