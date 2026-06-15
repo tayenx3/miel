@@ -7,9 +7,9 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
 ## 0.1.0 Alpha
 
 - [ ] Basic Compiler Core
-  - [ ] Lexer
-  - [ ] Parser
-  - [ ] Semantic Analysis
+  - [x] Lexer
+  - [x] Parser
+  - [x] Semantic Analysis
   - [ ] IR
     - [ ] Code Generation
     - [ ] Optimization Passes
@@ -20,21 +20,20 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] Basic Primitive Types
       - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
       - [x] Floats (`float`, `f32`, `f64`)
-      - [ ] Booleans
+      - [x] Booleans
       - [ ] String Slices
-      - [ ] Box (`box T`)
       - [ ] Pointer (`*T`)
+      - [ ] Structs and Enums
     - [ ] Type Inference
-    - [x] Constants with Compile-time Evaluation
   - [ ] Mutation
   - [ ] Memory Management
     - [ ] Stack Allocation (Variables)
     - [ ] `box T` Heap Allocation
     - [ ] Dereference (`*ptr`)
   - [ ] Functions
-    - [x] Callable Type Syntax
+    - [x] `callable()` Type Syntax
     - [ ] Parameters and Return Values
-    - [ ] Function Calls
+    - [x] Function Calls
     - [ ] Multiple Functions
   - [ ] Control Flow
     - [x] If/else Conditionals
@@ -44,7 +43,18 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
 
 ## 0.2.0 Alpha
 
-- [ ] Structs and Enums
+- [ ] Box (`box T`)
+- [ ] Iterators
+  - [ ] Iterator Definition API (not decided on yet)
+  - [ ] Ranges
+  - [ ] For Loops
+
+## 0.3.0 Alpha
+
+- [ ] Constants with Compile-time Evaluation
+
+## 0.4.0 Alpha
+
 - [ ] Result (`T ! E`)
   - [ ] Error Propagation
   - [ ] Expect/Unwrap
@@ -55,24 +65,39 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
   - [ ] Custom Permission Definitions
   - [ ] `@Permission` Syntax
   - [ ] `acquire`/`release` Syntax
+
+## 0.5.0 Alpha
+
 - [ ] Affine Types
   - [ ] Affine Protection
   - [ ] `#affine` Directive
   - [ ] Permission Checking Pass
+
+## 0.6.0 Alpha
+
+- [ ] Generics/Polymorphism
+
+## 0.7.0 Alpha
+
 - [ ] Cross-Compilation
   - [ ] Target Triples (Windows/Linux/macOS)
   - [ ] `--target` Flag
 
-## 0.3.0 Alpha-0.7.0 Beta
+## 0.8.0 Alpha
 
-- [ ] Generics/Polymorphism
-- [ ] Iterators
-  - [ ] Iterator Definition API (not decided on yet)
-  - [ ] Ranges
-  - [ ] For Loops
 - [ ] Module System
   - [ ] Basic Imports
   - [ ] Circular Imports
+
+## 0.9.0 Alpha
+
+- [ ] Concurrency Basics
+  - [ ] `spawn` keyword (goroutine/fiber style)
+  - [ ] Channels (`chan T` type)
+
+## 0.10.0 Alpha
+
+- [ ] Project System (combs) and Build System
 - [ ] Basic Standard Library
   - [ ] I/O (`std/io`)
     - [ ] `Print`/`PrintLn` Functions
@@ -114,7 +139,7 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
       - [ ] Apéry's Constant
       - [ ] Pythagoras' Constant
       - [ ] Catalan's Constant
-- [ ] Concurrency Basics
-  - [ ] `spawn` keyword (goroutine/fiber style)
-  - [ ] Channels (`chan T` type)
-- [ ] Project System and Build System
+
+## 0.11.0-0.x.0 Alpha
+
+- Stabilizations and polish

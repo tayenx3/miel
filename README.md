@@ -1,6 +1,7 @@
 <div align="center">
     <h1>Miel</h1>
-    <img src="https://shields.io/badge/status-0.0.1%20Pre--Alpha-purple" alt="status: 0.0.1 Pre-Alpha">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-blue">
+    <img src="https://img.shields.io/badge/status-0.0.1%20Pre--Alpha-purple" alt="status: 0.0.1 Pre-Alpha">
 </div>
 
 > **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. Syntax can change and documentation is nonexistent. Now is the perfect time to get involved to help Miel stabilize.
