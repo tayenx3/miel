@@ -8,12 +8,14 @@ pub enum Operator {
     Star,
     Slash,
     Modulo,
+    Eq, Ne, Gt, Lt, Ge, Le,
+    Bang
 }
 
 impl Operator {
     #[inline]
     pub const fn can_infix(&self) -> bool {
-        true // there's no purely infix ops rn
+        !matches!(self, Self::Bang)
     }
 
     #[inline]
@@ -24,11 +26,15 @@ impl Operator {
     #[inline]
     pub const fn binding_power(&self) -> usize {
         match self {
-            Self::Plus | Self::Minus => 20,
-            Self::Star | Self::Slash | Self::Modulo => 30,
+            Self::Eq | Self::Ne => 10,
+            Self::Gt | Self::Lt | Self::Ge | Self::Le => 20,
+            Self::Plus | Self::Minus => 30,
+            Self::Star | Self::Slash | Self::Modulo => 40,
+            _ => 0, // prefix op
         }
     }
 
+    // comparisons might be inconsistent with true evaluations with floats
     pub fn eval_infix(&self, lhs: &ConstValue, rhs: &ConstValue) -> Option<ConstValue> {
         match self {
             Self::Plus => match (lhs, rhs) {
@@ -56,6 +62,41 @@ impl Operator {
                 (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Float(l % r)),
                 _ => None
             },
+            Self::Eq => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l == r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l == r)),
+                (ConstValue::Nil, ConstValue::Nil) => Some(ConstValue::Bool(true)),
+                (ConstValue::Tuple(l), ConstValue::Tuple(r)) => compare_tuples_eq(l, r).map(|b| ConstValue::Bool(b)),
+                _ => None
+            },
+            Self::Ne => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l == r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l == r)),
+                (ConstValue::Nil, ConstValue::Nil) => Some(ConstValue::Bool(true)),
+                (ConstValue::Tuple(l), ConstValue::Tuple(r)) => compare_tuples_ne(l, r).map(|b| ConstValue::Bool(b)),
+                _ => None
+            },
+            Self::Gt => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l > r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l > r)),
+                _ => None
+            },
+            Self::Lt => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l < r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l < r)),
+                _ => None
+            },
+            Self::Ge => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l >= r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l >= r)),
+                _ => None
+            },
+            Self::Le => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Bool(l <= r)),
+                (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l <= r)),
+                _ => None
+            },
+            _ => None
         }
     }
     
@@ -69,6 +110,11 @@ impl Operator {
             Self::Minus => match operand {
                 ConstValue::Int(o) => Some(ConstValue::Int(-(*o))),
                 ConstValue::Float(o) => Some(ConstValue::Float(-(*o))),
+                _ => None
+            },
+            Self::Bang => match operand {
+                ConstValue::Int(o) => Some(ConstValue::Int(!o)),
+                ConstValue::Bool(o) => Some(ConstValue::Bool(!o)),
                 _ => None
             },
             _ => None
@@ -94,7 +140,36 @@ impl Operator {
                 }
             } else {
                 None
-            }
+            },
+            Self::Eq | Self::Ne => if matches!(lty, Type::Callable { .. }) {
+                None
+            } else if lty == rty {
+                Some(type_pool.predef_types.bool_id)
+            } else if lty.is_coerceable_into(rty) {
+                type_pool.coerce_type(lhs, rty.clone());
+                Some(type_pool.predef_types.bool_id)
+            } else if rty.is_coerceable_into(lty) {
+                type_pool.coerce_type(rhs, lty.clone());
+                Some(type_pool.predef_types.bool_id)
+            } else {
+                None
+            },
+            Self::Gt | Self::Lt | Self::Ge | Self::Le => if lty.is_numeric() && rty.is_numeric() {
+                if lty == rty {
+                    Some(type_pool.predef_types.bool_id)
+                } else if lty.is_coerceable_into(rty) {
+                    type_pool.coerce_type(lhs, rty.clone());
+                    Some(type_pool.predef_types.bool_id)
+                } else if rty.is_coerceable_into(lty) {
+                    type_pool.coerce_type(rhs, lty.clone());
+                    Some(type_pool.predef_types.bool_id)
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
+            _ => None
         }
     }
     
@@ -102,6 +177,11 @@ impl Operator {
         let oty = type_pool.get_type(operand)?;
         match self {
             Self::Plus | Self::Minus => if oty.is_numeric() {
+                Some(*operand)
+            } else {
+                None
+            },
+            Self::Bang => if oty.is_int() || *oty == Type::Bool {
                 Some(*operand)
             } else {
                 None
@@ -119,6 +199,51 @@ impl fmt::Display for Operator {
             Self::Star => write!(f, "*"),
             Self::Slash => write!(f, "/"),
             Self::Modulo => write!(f, "%"),
+            Self::Eq => write!(f, "=="),
+            Self::Ne => write!(f, "!="),
+            Self::Gt => write!(f, ">"),
+            Self::Lt => write!(f, "<"),
+            Self::Ge => write!(f, ">="),
+            Self::Le => write!(f, "<="),
+            Self::Bang => write!(f, "!"),
         }
     }
+}
+
+fn compare_tuples_eq(l: &[ConstValue], r: &[ConstValue]) -> Option<bool> {
+    for (lval, rval) in l.iter().zip(r) {
+        match (lval, rval) {
+            (ConstValue::Int(l), ConstValue::Int(r)) => if l != r {
+                return Some(false);
+            },
+            (ConstValue::Float(l), ConstValue::Float(r)) => if l != r {
+                return Some(false);
+            },
+            (ConstValue::Nil, ConstValue::Nil) => continue,
+            (ConstValue::Tuple(l), ConstValue::Tuple(r)) => if !compare_tuples_eq(l, r)? {
+                return Some(false);
+            },
+            _ => return None,
+        }
+    }
+    Some(true)
+}
+
+fn compare_tuples_ne(l: &[ConstValue], r: &[ConstValue]) -> Option<bool> {
+    for (lval, rval) in l.iter().zip(r) {
+        match (lval, rval) {
+            (ConstValue::Int(l), ConstValue::Int(r)) => if l != r {
+                return Some(true);
+            },
+            (ConstValue::Float(l), ConstValue::Float(r)) => if l != r {
+                return Some(true);
+            },
+            (ConstValue::Nil, ConstValue::Nil) => continue,
+            (ConstValue::Tuple(l), ConstValue::Tuple(r)) => if compare_tuples_ne(l, r)? {
+                return Some(true);
+            },
+            _ => return None,
+        }
+    }
+    Some(false)
 }

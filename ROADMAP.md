@@ -36,7 +36,7 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] Function Calls
     - [ ] Multiple Functions
   - [ ] Control Flow
-    - [ ] If/else Conditionals
+    - [x] If/else Conditionals
     - [ ] While Loops
     - [ ] Return
     - [ ] Break/Continue
@@ -58,6 +58,9 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
   - [ ] Affine Protection
   - [ ] `#affine` Directive
   - [ ] Permission Checking Pass
+- [ ] Cross-Compilation
+  - [ ] Target Triples (Windows/Linux/macOS)
+  - [ ] `--target` Flag
 
 ## 0.3.0 Alpha-0.7.0 Beta
 
@@ -113,6 +116,4 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
 - [ ] Concurrency Basics
   - [ ] `spawn` keyword (goroutine/fiber style)
   - [ ] Channels (`chan T` type)
-- [ ] Cross-Compilation
-  - [ ] Target Triples (Windows/Linux/macOS)
-  - [ ] `--target` Flag
+- [ ] Project System and Build System

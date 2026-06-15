@@ -70,6 +70,7 @@ pub struct ConstId(pub usize);
 pub enum ConstValue {
     Int(i64),
     Float(f64),
+    Bool(bool),
     Nil,
     Tuple(Vec<ConstValue>),
     Callable {

@@ -18,6 +18,7 @@ impl Span {
     #[inline]
     pub fn concat(&self, other: &Span) -> Self {
         debug_assert_eq!(self.source_id, other.source_id);
+        debug_assert!(self.start <= other.end);
         Self {
             start: self.start,
             end: other.end,

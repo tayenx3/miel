@@ -13,6 +13,7 @@ pub enum TokenKind<'tok> {
     Semicolon,
     KwCallable,
     KwNil,
+    KwIf, KwThen, KwElse,
 }
 
 impl<'tok> TokenKind<'tok> {
@@ -35,6 +36,9 @@ impl<'tok> TokenKind<'tok> {
             Self::Semicolon => ';'.to_string(),
             Self::KwCallable => "callable".to_string(),
             Self::KwNil => "nil".to_string(),
+            Self::KwIf => "if".to_string(),
+            Self::KwThen => "then".to_string(),
+            Self::KwElse => "else".to_string(),
         }
     }
 }

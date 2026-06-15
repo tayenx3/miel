@@ -506,6 +506,20 @@ impl<'sch> SemaChecker<'sch> {
                     }
                 }
                 if !errors.is_empty() { return Err(errors) }
+                self.type_map.insert(node.id, self.ty_pool.create_type(Type::Tuple(item_tys)));
+                Ok(())
+            },
+            NodeKind::Block(items) => {
+                let mut errors = Vec::new();
+                let mut last_ty = self.ty_pool.predef_types.nil_id;
+                for i in items {
+                    match self.check_node(i) {
+                        Ok(()) => last_ty = self.type_map[&i.id],
+                        Err(errs) => errors.extend(errs),
+                    }
+                }
+                if !errors.is_empty() { return Err(errors) }
+                self.type_map.insert(node.id, last_ty);
                 Ok(())
             },
             NodeKind::Callable { .. } => Ok(()),
@@ -621,7 +635,90 @@ impl<'sch> SemaChecker<'sch> {
                 Ok(())
             },
             NodeKind::ShortConstDecl { .. }
-            | NodeKind::ConstDecl { .. } => Ok(())
+            | NodeKind::ConstDecl { .. } => Ok(()),
+            NodeKind::If { cond, then, else_ } => {
+                let mut errors = Vec::new();
+                if let Err(errs) = self.check_node(cond) {
+                    errors.extend(errs);
+                }
+                if let Err(errs) = self.check_node(then) {
+                    errors.extend(errs);
+                }
+                if let Some(expr) = else_ {
+                    if let Err(errs) = self.check_node(expr) {
+                        errors.extend(errs);
+                    }
+                }
+                if !errors.is_empty() {
+                    return Err(errors);
+                }
+
+                let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
+                if *cond_ty != Type::Bool {
+                    errors.push(
+                        Diag::error()
+                            .with_message("Type mismatch")
+                            .with_labels(vec![
+                                Label::primary(cond.span.source_id, cond.span.start..cond.span.end)
+                                    .with_message(format!(
+                                        "expected `bool`, found `{}`",
+                                        cond_ty.format(&self.ty_pool)
+                                    ))
+                            ]).with_notes(vec![format!(
+                                "{}: `if` condition must be of type `bool`",
+                                "note".blue().bold().underline(),
+                            )])
+                    );
+                }
+                let then_ty = self.ty_pool.get_type(&self.type_map[&then.id]).unwrap();
+                if let Some(expr) = &else_ {
+                    let else_ty = self.ty_pool.get_type(&self.type_map[&expr.id]).unwrap();
+                    if then_ty.is_coerceable_into(else_ty) {
+                        self.ty_pool.coerce_type(&self.type_map[&then.id], else_ty.clone());
+                    } else if else_ty.is_coerceable_into(then_ty) {
+                        self.ty_pool.coerce_type(&self.type_map[&expr.id], then_ty.clone());
+                    } else {
+                        errors.push(
+                            Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(expr.span.source_id, expr.span.start..expr.span.end)
+                                        .with_message(format!(
+                                            "expected `{}`, found `{}`",
+                                            then_ty.format(&self.ty_pool),
+                                            else_ty.format(&self.ty_pool)
+                                        )),
+                                    Label::secondary(then.span.source_id, then.span.start..then.span.end)
+                                        .with_message(format!(
+                                            "this has type `{}`",
+                                            then_ty.format(&self.ty_pool)
+                                        ))
+                                ]).with_notes(vec![format!(
+                                    "{}: clauses must return the same type or one clause returning `nil`",
+                                    "note".blue().bold().underline(),
+                                )])
+                        );
+                    }
+                } else if *then_ty != Type::Nil {
+                    errors.push(
+                        Diag::error()
+                            .with_message("Missing clause")
+                            .with_labels(vec![
+                                Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                    .with_message(format!(
+                                        "expected `else` clause of type `{}`",
+                                        then_ty.format(&self.ty_pool)
+                                    ))
+                            ]).with_notes(vec![format!(
+                                "{}: clauses must return the same type or one clause returning `nil`",
+                                "note".blue().bold().underline(),
+                            )])
+                    );
+                }
+                if !errors.is_empty() { return Err(errors) }
+                self.type_map.insert(node.id, self.type_map[&then.id]);
+                Ok(())
+            },
         }
     }
     
@@ -788,8 +885,10 @@ impl<'sch> SemaChecker<'sch> {
                     }
                 }
                 if !errors.is_empty() { return Err(errors) }
+                let ty_id = self.ty_pool.create_type(Type::Tuple(item_tys));
+                self.type_map.insert(node.id, ty_id);
                 Ok((
-                    self.ty_pool.create_type(Type::Tuple(item_tys)),
+                    ty_id,
                     ConstValue::Tuple(item_vals)
                 ))
             },
@@ -824,6 +923,7 @@ impl<'sch> SemaChecker<'sch> {
                     params: param_tys,
                     ret_ty: ret_t
                 });
+                self.type_map.insert(node.id, ty_id);
                 Ok((ty_id, value))
             },
             // todo: check for calls to constant functions

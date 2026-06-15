@@ -30,6 +30,7 @@ pub enum NodeKind {
         operand: Box<Node>,
     },
     Tuple(Vec<Node>),
+    Block(Vec<Node>),
 
     Callable {
         params: Vec<Param>,
@@ -60,6 +61,12 @@ pub enum NodeKind {
         name: lasso::Spur,
         ty: ParsedType,
         expr: Box<Node>,
+    },
+
+    If {
+        cond: Box<Node>,
+        then: Box<Node>,
+        else_: Option<Box<Node>>,
     },
 }
 

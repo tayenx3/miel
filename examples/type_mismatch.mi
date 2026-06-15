@@ -1,6 +1,0 @@
-Add :: callable(a: float, b: float): int { a + b }
-
-Main :: callable() {
-    test := Add(6, 5)
-    o := test + 5
-}

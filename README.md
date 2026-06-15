@@ -59,6 +59,12 @@ cargo build --release
 # result should be in ./target/release with the name miel.exe, probably
 ```
 
+## Contributing
+
+Contributions, either small or large, are always valued.
+
+More information at [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Philosophy
 
 Miel was created just for the joy of creation (no, not a FNAF reference).

@@ -105,10 +105,54 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                 kind: TokenKind::Comma,
                 span: Span { start, end: start + ch.len_utf8(), source_id }
             }),
-            '=' => tokens.push(Token {
-                kind: TokenKind::Assign,
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
+            '=' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Eq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Assign,
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '!' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Ne),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Bang),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '>' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Ge),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Gt),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '<' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Le),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Lt),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
             '0'..='9' => {
                 let mut end: usize = start + 1;
                 let mut is_float = false;
@@ -154,6 +198,9 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                 let kind = match &source[start..end] {
                     "callable" => TokenKind::KwCallable,
                     "nil" => TokenKind::KwNil,
+                    "if" => TokenKind::KwIf,
+                    "then" => TokenKind::KwThen,
+                    "else" => TokenKind::KwElse,
                     other => TokenKind::Identifier(rodeo.get_or_intern(other))
                 };
                 tokens.push(Token {

@@ -206,6 +206,7 @@ impl<'p> Parser<'p> {
                 ))
             },
             TokenKind::LParen => self.parse_paren(),
+            TokenKind::LCurly => self.parse_block(),
             TokenKind::Operator(op) if op.can_prefix() => {
                 self.advance();
                 let operand = self.parse_expression(0)?;
@@ -226,6 +227,7 @@ impl<'p> Parser<'p> {
                     tok.span
                 ))
             },
+            TokenKind::KwIf => self.parse_if(),
             other => Err(Diag::error()
                 .with_message(format!("Unexpected `{}`", other.format(self.ctx.rodeo)))
                 .with_labels(vec![
@@ -255,6 +257,20 @@ impl<'p> Parser<'p> {
         span = span.concat(&self.expect(TokenKind::RParen)?.span);
         Ok(self.create_node(
             NodeKind::Tuple(items),
+            span,
+        ))
+    }
+
+    fn parse_block(&mut self) -> Result<Node, Diag> {
+        let mut span = self.expect(TokenKind::LCurly)?.span;
+        let mut stmts = Vec::new();
+        while let Some(tok) = self.tokens.get(self.pos) {
+            if tok.kind == TokenKind::RCurly { break }
+            stmts.push(self.parse_expression(0)?);
+        }
+        span = span.concat(&self.expect(TokenKind::RCurly)?.span);
+        Ok(self.create_node(
+            NodeKind::Block(stmts),
             span,
         ))
     }
@@ -394,6 +410,24 @@ impl<'p> Parser<'p> {
                 span
             ))
         }
-        
+    }
+
+    fn parse_if(&mut self) -> Result<Node, Diag> {
+        let mut span = self.expect(TokenKind::KwIf)?.span;
+        let cond = Box::new(self.parse_expression(0)?);
+        self.expect(TokenKind::KwThen)?;
+        let then = Box::new(self.parse_expression(0)?);
+        let else_ = if self.expect(TokenKind::KwElse).is_ok() {
+            let expr = self.parse_expression(0)?;
+            span = span.concat(&expr.span);
+            Some(Box::new(expr))
+        } else {
+            span = span.concat(&then.span);
+            None
+        };
+        Ok(self.create_node(
+            NodeKind::If { cond, then, else_ },
+            span
+        ))
     }
 }

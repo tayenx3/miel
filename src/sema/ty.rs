@@ -15,6 +15,7 @@ pub struct PreDefinedTypes {
     pub float_id: TypeId,
     pub f32_id: TypeId,
     pub f64_id: TypeId,
+    pub bool_id: TypeId,
     pub nil_id: TypeId,
 }
 
@@ -83,6 +84,10 @@ impl TypePool {
         next_id += 1;
         types.insert(f64_id, Type::F64);
         
+        let bool_id = TypeId(next_id);
+        next_id += 1;
+        types.insert(bool_id, Type::Bool);
+        
         let nil_id = TypeId(next_id);
         next_id += 1;
         types.insert(nil_id, Type::Nil);
@@ -93,7 +98,7 @@ impl TypePool {
                 int_id, uint_id,
                 i8_id, i16_id, i32_id, i64_id,
                 u8_id, u16_id, u32_id, u64_id,
-                float_id, f32_id, f64_id,
+                float_id, f32_id, f64_id, bool_id,
                 nil_id
             },
         }
@@ -128,12 +133,13 @@ pub enum Type {
     AmbiguousFloat,
     Float, // platform float
     F32, F64,
+    Bool,
     Nil,
     Tuple(Vec<TypeId>),
     Callable {
         params: Vec<TypeId>,
         ret_ty: TypeId
-    }
+    },
 }
 
 impl Type {
@@ -189,6 +195,7 @@ impl Type {
             Self::Float => "float".to_string(),
             Self::F32 => "f32".to_string(),
             Self::F64 => "f64".to_string(),
+            Self::Bool => "bool".to_string(),
             Self::Nil => "nil".to_string(),
             Self::Tuple(items) => {
                 let mut buf = String::new();
