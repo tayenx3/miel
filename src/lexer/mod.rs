@@ -201,6 +201,8 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     "if" => TokenKind::KwIf,
                     "then" => TokenKind::KwThen,
                     "else" => TokenKind::KwElse,
+                    "while" => TokenKind::KwWhile,
+                    "do" => TokenKind::KwDo,
                     other => TokenKind::Identifier(rodeo.get_or_intern(other))
                 };
                 tokens.push(Token {

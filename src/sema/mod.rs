@@ -512,12 +512,14 @@ impl<'sch> SemaChecker<'sch> {
             NodeKind::Block(items) => {
                 let mut errors = Vec::new();
                 let mut last_ty = self.ty_pool.predef_types.nil_id;
+                self.scope.last_mut().unwrap().push(SymbolMap::new());
                 for i in items {
                     match self.check_node(i) {
                         Ok(()) => last_ty = self.type_map[&i.id],
                         Err(errs) => errors.extend(errs),
                     }
                 }
+                self.scope.last_mut().unwrap().pop();
                 if !errors.is_empty() { return Err(errors) }
                 self.type_map.insert(node.id, last_ty);
                 Ok(())
@@ -640,36 +642,42 @@ impl<'sch> SemaChecker<'sch> {
                 let mut errors = Vec::new();
                 if let Err(errs) = self.check_node(cond) {
                     errors.extend(errs);
+                } else {
+                    let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
+                    if *cond_ty != Type::Bool {
+                        errors.push(
+                            Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(cond.span.source_id, cond.span.start..cond.span.end)
+                                        .with_message(format!(
+                                            "expected `bool`, found `{}`",
+                                            cond_ty.format(&self.ty_pool)
+                                        ))
+                                ]).with_notes(vec![format!(
+                                    "{}: `if` condition must be of type `bool`",
+                                    "note".blue().bold().underline(),
+                                )])
+                        );
+                    }
                 }
+                self.scope.last_mut().unwrap().push(SymbolMap::new());
                 if let Err(errs) = self.check_node(then) {
                     errors.extend(errs);
                 }
+                self.scope.last_mut().unwrap()
+                    .last_mut().unwrap()
+                    .clear();
                 if let Some(expr) = else_ {
                     if let Err(errs) = self.check_node(expr) {
                         errors.extend(errs);
                     }
                 }
+                self.scope.last_mut().unwrap().pop();
                 if !errors.is_empty() {
                     return Err(errors);
                 }
-
-                let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
-                if *cond_ty != Type::Bool {
-                    errors.push(
-                        Diag::error()
-                            .with_message("Type mismatch")
-                            .with_labels(vec![
-                                Label::primary(cond.span.source_id, cond.span.start..cond.span.end)
-                                    .with_message(format!(
-                                        "expected `bool`, found `{}`",
-                                        cond_ty.format(&self.ty_pool)
-                                    ))
-                            ]).with_notes(vec![format!(
-                                "{}: `if` condition must be of type `bool`",
-                                "note".blue().bold().underline(),
-                            )])
-                    );
-                }
+                
                 let then_ty = self.ty_pool.get_type(&self.type_map[&then.id]).unwrap();
                 if let Some(expr) = &else_ {
                     let else_ty = self.ty_pool.get_type(&self.type_map[&expr.id]).unwrap();
@@ -717,6 +725,38 @@ impl<'sch> SemaChecker<'sch> {
                 }
                 if !errors.is_empty() { return Err(errors) }
                 self.type_map.insert(node.id, self.type_map[&then.id]);
+                Ok(())
+            },
+            NodeKind::While { cond, body } => {
+                let mut errors = Vec::new();
+                if let Err(errs) = self.check_node(cond) {
+                    errors.extend(errs);
+                } else {
+                    let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
+                    if *cond_ty != Type::Bool {
+                        errors.push(
+                            Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(cond.span.source_id, cond.span.start..cond.span.end)
+                                        .with_message(format!(
+                                            "expected `bool`, found `{}`",
+                                            cond_ty.format(&self.ty_pool)
+                                        ))
+                                ]).with_notes(vec![format!(
+                                    "{}: `while` condition must be of type `bool`",
+                                    "note".blue().bold().underline(),
+                                )])
+                        );
+                    }
+                }
+                self.scope.last_mut().unwrap().push(SymbolMap::new());
+                if let Err(errs) = self.check_node(body) {
+                    errors.extend(errs);
+                }
+                self.scope.last_mut().unwrap().pop();
+                if !errors.is_empty() { return Err(errors) }
+                self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
                 Ok(())
             },
         }

@@ -228,6 +228,7 @@ impl<'p> Parser<'p> {
                 ))
             },
             TokenKind::KwIf => self.parse_if(),
+            TokenKind::KwWhile => self.parse_while(),
             other => Err(Diag::error()
                 .with_message(format!("Unexpected `{}`", other.format(self.ctx.rodeo)))
                 .with_labels(vec![
@@ -427,6 +428,18 @@ impl<'p> Parser<'p> {
         };
         Ok(self.create_node(
             NodeKind::If { cond, then, else_ },
+            span
+        ))
+    }
+    
+    fn parse_while(&mut self) -> Result<Node, Diag> {
+        let mut span = self.expect(TokenKind::KwWhile)?.span;
+        let cond = Box::new(self.parse_expression(0)?);
+        self.expect(TokenKind::KwDo)?;
+        let body = Box::new(self.parse_expression(0)?);
+        span = span.concat(&body.span);
+        Ok(self.create_node(
+            NodeKind::While { cond, body },
             span
         ))
     }

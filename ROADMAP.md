@@ -26,6 +26,7 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
       - [ ] Pointer (`*T`)
     - [ ] Type Inference
     - [x] Constants with Compile-time Evaluation
+  - [ ] Mutation
   - [ ] Memory Management
     - [ ] Stack Allocation (Variables)
     - [ ] `box T` Heap Allocation
@@ -37,7 +38,7 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] Multiple Functions
   - [ ] Control Flow
     - [x] If/else Conditionals
-    - [ ] While Loops
+    - [x] While Loops
     - [ ] Return
     - [ ] Break/Continue
 

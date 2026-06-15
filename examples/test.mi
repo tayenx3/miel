@@ -1,7 +1,6 @@
 Main :: callable() {
     a: u8 = 10
     b: i32 = 10
-    x := if 1 == 2 then a
-    else b
+    while a == 10 do {}
     {}
 }

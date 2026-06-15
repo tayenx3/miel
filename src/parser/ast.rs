@@ -68,6 +68,10 @@ pub enum NodeKind {
         then: Box<Node>,
         else_: Option<Box<Node>>,
     },
+    While {
+        cond: Box<Node>,
+        body: Box<Node>,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

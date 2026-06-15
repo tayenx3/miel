@@ -19,6 +19,12 @@ impl SymbolMap {
             defined_at: HashMap::new(),
         }
     }
+
+    pub fn clear(&mut self) {
+        self.types.clear();
+        self.constants.clear();
+        self.defined_at.clear();
+    }
     
     pub fn define_symbol(&mut self, name: lasso::Spur, ty: TypeId, defined_at: Span) {
         self.types.insert(name, ty);
