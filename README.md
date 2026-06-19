@@ -47,17 +47,64 @@ You're probably better off with Rust, Odin or Jai.
 
 ## Installation
 
-Prerequisites:
+### Prerequisites
 
-- Rust (install through https://rustup.rs)
-- Visual Studio Build Tools (for Rust, should be prompted for when installing Rust)
-- Git (install through https://git-scm.com)
+To install/build Miel, you will need:
+
+- Rust (install via [rustup.rs](https://rustup.rs))
+- Git (install via [git-scm.com](https://git-scm.com))
+
+### Install for your user only (default)
+
+```bash
+cargo install --git https://github.com/tayenx3/miel.git
+
+# Verification
+miel --version
+```
+
+> **Note:** If miel is not found, ensure ~/.cargo/bin is in your PATH. Rustup usually adds this automatically.
+
+### Install system-wide (for all users)
 
 ```bash
 git clone https://github.com/tayenx3/miel.git
 cd miel
+cargo install --path .
+sudo ln -sf ~/.cargo/bin/miel /usr/local/bin/miel
+
+# Verification
+miel --version
+```
+
+This symlinks the binary to /usr/local/bin, making it available to every user on the system.
+
+### Building manually
+
+If you prefer to build and place the binary yourself:
+
+```bash
 cargo build --release
-# result should be in ./target/release with the name miel.exe, probably
+# Binary should be located at ./target/release/miel
+# You can copy it anywhere
+
+# For user-only:
+cp ./target/release/miel ~/.cargo/bin/
+
+# For system-wide:
+sudo cp ./target/release/miel /usr/local/bin/
+```
+
+### Uninstallation
+
+```bash
+# If installed via cargo install:
+cargo uninstall miel
+
+# If symlinked:
+sudo rm /usr/local/bin/miel
+
+# If manually copied, remove from wherever you placed it
 ```
 
 ## Contributing
