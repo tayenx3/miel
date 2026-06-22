@@ -16,7 +16,6 @@ const STATUS: &'static str = "Pre-Alpha";
 
 fn print_version() {
     println!("Miel Language Compiler, Version {} {}", env!("CARGO_PKG_VERSION"), STATUS);
-    println!("Copyright 2026 tayenp");
     println!("Licensed under the Apache License, Version 2.0");
 }
 

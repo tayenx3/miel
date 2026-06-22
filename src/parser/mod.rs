@@ -402,6 +402,16 @@ impl<'p> Parser<'p> {
                 },
                 span
             ))
+        } else if self.expect(TokenKind::Assign).is_ok() {
+            let expr = self.parse_expression(0).map_err(|err| (err, true))?;
+            span = span.concat(&expr.span);
+            Ok(self.create_node(
+                NodeKind::Mutation {
+                    name,
+                    expr: Box::new(expr)
+                },
+                span
+            ))
         } else {
             self.expect(TokenKind::Walrus).map_err(|err| (err, false))?;
             let expr = self.parse_expression(0).map_err(|err| (err, true))?;

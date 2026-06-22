@@ -52,6 +52,10 @@ pub enum NodeKind {
         ty: ParsedType,
         expr: Box<Node>,
     },
+    Mutation {
+        name: lasso::Spur,
+        expr: Box<Node>,
+    },
 
     ShortConstDecl {
         name: lasso::Spur,

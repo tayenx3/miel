@@ -37,7 +37,7 @@ impl SymbolMap {
         self.defined_at.insert(name, defined_at);
     }
     
-    pub fn find_symbol(&self, name: &lasso::Spur, ctx: &Context) -> Result<(&TypeId, Option<&ConstValue>, &Span), Option<&lasso::Spur>> {
+    pub fn find_symbol(&self, name: &lasso::Spur, ctx: &Context) -> Result<(&TypeId, Option<&ConstValue>, &Span), Option<(&lasso::Spur, f64)>> {
         // this already checks if `name` is in scope or not
         let mut ty = None;
         let mut candidate = None;
@@ -53,7 +53,7 @@ impl SymbolMap {
                 );
                 if score > super::CANDIDATE_SCORE_THRESHOLD && score > last_score {
                     last_score = score;
-                    candidate = Some(sname);
+                    candidate = Some((sname, last_score));
                 }
             }
         }

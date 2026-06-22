@@ -23,6 +23,8 @@ We are likely at before v0.1.0. Which is... **very** early.
       - [x] Booleans
     - [ ] Type Inference
   - [ ] Mutation
+    - [x] `=` Reassignment
+    - [ ] Augmented Operators
   - [x] Functions
     - [x] `callable()` Type Syntax
     - [x] Parameters and Return Values

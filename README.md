@@ -9,31 +9,35 @@ A cozy, general-purpose programming language for creating provably safe and secu
 
 ```haskell
 cap Foo
-;; capability types help prove secure data access at compile-time
-Bar :: callable(n: Baz) @Foo {
-  ;; ...
-}
 
 ;; affine types allow for safe and efficient memory usage
  #Affine
- struct Baz @Foo {
+ struct Bar @Foo {
   a: int,
   b: float,
   c: bool,
 }
+;; capability types help prove secure data access at compile-time
+Baz :: callable(n: Bar) @Foo {
+  ;; ...
+}
+Qux :: callable(n: Bar) {
+  a := n ;; error: usage of type `Bar` requires capability `Foo`
+  ;; ...
+}
 
 Main :: callable() @Root {
   acquire Foo from Root
-  baz := Baz {
+  bar := Bar {
     a: 0,
     b: 0.0,
     c: false,
   }
   
-  Bar(baz)
-  Bar(baz) ;; error: `baz` was moved
+  Baz(bar)
+  Baz(bar) ;; error: `bar` was moved
 
-  quz := Baz {
+  bar2 := Bar {
     a: 69,
     b: 42.0,
     c: true,
@@ -41,8 +45,8 @@ Main :: callable() @Root {
   
   release Foo ;; release when unneeded (or let the compiler implicitly release at the end of scope)
 
-  Bar(quz) ;; error: usage of function `Bar` requires capability `Foo`
-  OtherOperation(quz) ;; error: usage of type `Baz` requires capability `Foo`
+  Baz(bar2) ;; error: usage of function `Baz` requires capability `Foo`
+  Qux(bar2) ;; error: usage of type `Bar` requires capability `Foo`
 }
 ```
 
