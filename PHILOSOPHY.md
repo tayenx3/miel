@@ -18,7 +18,7 @@ I made it because I wanted to.\
 When did that become not enough?
 
 I made Miel because I like `;;` as comments.\
-I made Miel because I like affine and permission types.\
+I made Miel because I like affine and capability types.\
 I made Miel because I wanted a language that *feels* like riding a bike.
 
 Not because it's "better than Rust" or "better than C++" or "better than Ada" but because it's *mine*.\
@@ -26,15 +26,10 @@ And maybe that's the only reason anyone needs.
 
 ## The True Meaning of Miel
 
-At the end of the day, we all know that the Sun will expand into a red behemoth and bring us all down with it.\
 Humans are the only species that still try to fight while knowing their defeat is inevitable.
 
 We build. We leap. And we're ruthless when it comes to learning.
-Because we're curious. **Because it wouldn't matter anyway.**
-
-In a time like this, everything is pointless anyway.\
-Pointless to the sun. Pointless to the universe.\
-So instead of staying nihilistic, why don't we just enjoy it in whatever ways our hearts have come to pulse in?
+Because we're curious. **Because it wouldn't matter anyway.** Not to the sun. Not to the universe.
 
 Why not enjoy it? **For 4 or 5 more billion years. Why not enjoy it?**
 

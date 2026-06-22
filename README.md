@@ -5,14 +5,14 @@
 
 > **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. Syntax can change and documentation is nonexistent. Now is the perfect time to get involved to help Miel stabilize.
 
-A cozy, general-purpose programming language for creating provably safe and secure systems.
+A cozy, general-purpose programming language for creating provably safe and secure systems while maintaining ergonomics and practicality.
 
 ```haskell
 cap Foo
 
 ;; affine types allow for safe and efficient memory usage
- #Affine
- struct Bar @Foo {
+#Affine
+struct Bar @Foo {
   a: int,
   b: float,
   c: bool,
@@ -21,6 +21,7 @@ cap Foo
 Baz :: callable(n: Bar) @Foo {
   ;; ...
 }
+;; lazy enforcement (checked at use-time)
 Qux :: callable(n: Bar) {
   a := n ;; error: usage of type `Bar` requires capability `Foo`
   ;; ...
@@ -52,7 +53,7 @@ Main :: callable() @Root {
 
 ## Why Miel?
 
-No reason, really. Honestly, just use Rust, Odin or Jai. I made Miel as "the language I'd use."\
+No reason, really. Honestly, just use Rust, Odin or Jai. Maybe Austral too. I made Miel as "the language I'd use."\
 Miel wasn't designed to be blazingly fast or revolutionary. Just.. "for me."
 
 You're probably better off with Rust, Odin or Jai.
@@ -121,7 +122,7 @@ sudo rm /usr/local/bin/miel
 
 ## Contributing
 
-Contributions, either small or large, are always valued.
+Miel is made by humans, for humans *(yes, really.)* So contributions, either small or large, are always valued.
 
 More information at [CONTRIBUTING.md](./CONTRIBUTING.md).
 

@@ -653,7 +653,29 @@ impl<'sch> SemaChecker<'sch> {
                     errors.extend(errs);
                 }
                 match self.find_ident(name, node.span) {
-                    Ok((ty_id, _, defined_at)) => {
+                    Ok((ty_id, val, defined_at)) => {
+                        if val.is_some() {
+                            let rname = self.ctx.rodeo.resolve(name);
+                            errors.push(
+                                Diag::error()
+                                    .with_message("Mutation of constant")
+                                    .with_labels(vec![
+                                        Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                            .with_message(format!(
+                                                "cannot mutate constant `{}`",
+                                                rname,
+                                            )),
+                                        Label::secondary(defined_at.source_id, defined_at.start..defined_at.end)
+                                            .with_message(format!(
+                                                "`{}` defined here",
+                                                rname,
+                                            )),
+                                    ]).with_notes(vec![format!(
+                                        "{}: Constants cannot be mutated",
+                                        "note".blue().bold().underline(),
+                                    )])
+                            );
+                        }
                         let expr_ty_id = &self.type_map[&expr.id];
                         let ty = self.ty_pool.get_type(ty_id).unwrap();
                         let expr_ty = self.ty_pool.get_type(expr_ty_id).unwrap();
@@ -761,7 +783,7 @@ impl<'sch> SemaChecker<'sch> {
                                             then_ty.format(&self.ty_pool)
                                         ))
                                 ]).with_notes(vec![format!(
-                                    "{}: clauses must return the same type or one clause returning `nil`",
+                                    "{}: Clauses must return the same type or one clause returning `nil`",
                                     "note".blue().bold().underline(),
                                 )])
                         );
@@ -777,7 +799,7 @@ impl<'sch> SemaChecker<'sch> {
                                         then_ty.format(&self.ty_pool)
                                     ))
                             ]).with_notes(vec![format!(
-                                "{}: clauses must return the same type or one clause returning `nil`",
+                                "{}: Clauses must return the same type or one clause returning `nil`",
                                 "note".blue().bold().underline(),
                             )])
                     );
@@ -850,7 +872,7 @@ impl<'sch> SemaChecker<'sch> {
                             Label::secondary(defined_at.source_id, defined_at.start..defined_at.end)
                                 .with_message(format!("`{}` defined here", ri)),
                         ]).with_notes(vec![format!(
-                            "{}: identifier `{}` is non-constant",
+                            "{}: Identifier `{}` is non-constant",
                             "note".blue().bold().underline(),
                             ri,
                         )])])

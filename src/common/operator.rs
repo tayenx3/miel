@@ -9,13 +9,14 @@ pub enum Operator {
     Slash,
     Modulo,
     Eq, Ne, Gt, Lt, Ge, Le,
-    Bang
+    Pipe, Ampersand, Caret, Bang,
+    KwOr, KwAnd, KwXor, KwNot,
 }
 
 impl Operator {
     #[inline]
     pub const fn can_infix(&self) -> bool {
-        !matches!(self, Self::Bang)
+        !matches!(self, Self::Bang | Self::KwNot)
     }
 
     #[inline]
@@ -26,10 +27,14 @@ impl Operator {
     #[inline]
     pub const fn binding_power(&self) -> usize {
         match self {
-            Self::Eq | Self::Ne => 10,
-            Self::Gt | Self::Lt | Self::Ge | Self::Le => 20,
-            Self::Plus | Self::Minus => 30,
-            Self::Star | Self::Slash | Self::Modulo => 40,
+            Self::KwOr | Self::KwXor => 10,
+            Self::KwAnd => 20,
+            Self::Eq | Self::Ne => 30,
+            Self::Gt | Self::Lt | Self::Ge | Self::Le => 40,
+            Self::Pipe | Self::Caret => 50,
+            Self::Ampersand => 60,
+            Self::Plus | Self::Minus => 70,
+            Self::Star | Self::Slash | Self::Modulo => 80,
             _ => 0, // prefix op
         }
     }
@@ -96,6 +101,33 @@ impl Operator {
                 (ConstValue::Float(l), ConstValue::Float(r)) => Some(ConstValue::Bool(l <= r)),
                 _ => None
             },
+            Self::Pipe => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Int(l | r)),
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(l | r)),
+                _ => None
+            },
+            Self::Ampersand => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Int(l & r)),
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(l & r)),
+                _ => None
+            },
+            Self::Caret => match (lhs, rhs) {
+                (ConstValue::Int(l), ConstValue::Int(r)) => Some(ConstValue::Int(l ^ r)),
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(l ^ r)),
+                _ => None
+            },
+            Self::KwOr => match (lhs, rhs) {
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(*l || *r)),
+                _ => None
+            },
+            Self::KwAnd => match (lhs, rhs) {
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(*l && *r)),
+                _ => None
+            },
+            Self::KwXor => match (lhs, rhs) {
+                (ConstValue::Bool(l), ConstValue::Bool(r)) => Some(ConstValue::Bool(*l ^ *r)),
+                _ => None
+            },
             _ => None
         }
     }
@@ -114,6 +146,10 @@ impl Operator {
             },
             Self::Bang => match operand {
                 ConstValue::Int(o) => Some(ConstValue::Int(!o)),
+                ConstValue::Bool(o) => Some(ConstValue::Bool(!o)),
+                _ => None
+            },
+            Self::KwNot => match operand {
                 ConstValue::Bool(o) => Some(ConstValue::Bool(!o)),
                 _ => None
             },
@@ -169,6 +205,28 @@ impl Operator {
             } else {
                 None
             },
+            Self::Pipe | Self::Ampersand | Self::Caret => if lty.is_int() && rty.is_int() {
+                if lty == rty {
+                    Some(*lhs)
+                } else if lty.is_coerceable_into(rty) {
+                    type_pool.coerce_type(lhs, rty.clone());
+                    Some(*lhs)
+                } else if rty.is_coerceable_into(lty) {
+                    type_pool.coerce_type(rhs, lty.clone());
+                    Some(*lhs)
+                } else {
+                    None
+                }
+            } else if matches!((lty, rty), (Type::Bool, Type::Bool)) {
+                Some(*lhs)
+            } else {
+                None
+            },
+            Self::KwOr | Self::KwAnd | Self::KwXor => if matches!((lty, rty), (Type::Bool, Type::Bool)) {
+                Some(*lhs)
+            } else {
+                None
+            },
             _ => None
         }
     }
@@ -182,6 +240,11 @@ impl Operator {
                 None
             },
             Self::Bang => if oty.is_int() || *oty == Type::Bool {
+                Some(*operand)
+            } else {
+                None
+            },
+            Self::KwNot => if *oty == Type::Bool {
                 Some(*operand)
             } else {
                 None
@@ -205,7 +268,14 @@ impl fmt::Display for Operator {
             Self::Lt => write!(f, "<"),
             Self::Ge => write!(f, ">="),
             Self::Le => write!(f, "<="),
+            Self::Pipe => write!(f, "|"),
+            Self::Ampersand => write!(f, "&"),
+            Self::Caret => write!(f, "^"),
             Self::Bang => write!(f, "!"),
+            Self::KwOr => write!(f, "or"),
+            Self::KwAnd => write!(f, "and"),
+            Self::KwXor => write!(f, "xor"),
+            Self::KwNot => write!(f, "not"),
         }
     }
 }

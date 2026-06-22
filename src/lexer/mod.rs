@@ -184,6 +184,18 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     span: Span { start, end, source_id }
                 });
             },
+            '|' => tokens.push(Token {
+                kind: TokenKind::Operator(Operator::Pipe),
+                span: Span { start, end: start + ch.len_utf8(), source_id }
+            }),
+            '&' => tokens.push(Token {
+                kind: TokenKind::Operator(Operator::Ampersand),
+                span: Span { start, end: start + ch.len_utf8(), source_id }
+            }),
+            '^' => tokens.push(Token {
+                kind: TokenKind::Operator(Operator::Caret),
+                span: Span { start, end: start + ch.len_utf8(), source_id }
+            }),
             ch if ch.is_alphabetic() || ch == '_' => {
                 let mut end: usize = start + 1;
                 while let Some(&(pos, ch)) = source_chars.peek() {
@@ -203,6 +215,10 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     "else" => TokenKind::KwElse,
                     "while" => TokenKind::KwWhile,
                     "do" => TokenKind::KwDo,
+                    "or" => TokenKind::Operator(Operator::KwOr),
+                    "and" => TokenKind::Operator(Operator::KwAnd),
+                    "xor" => TokenKind::Operator(Operator::KwXor),
+                    "not" => TokenKind::Operator(Operator::KwNot),
                     other => TokenKind::Identifier(rodeo.get_or_intern(other))
                 };
                 tokens.push(Token {

@@ -19,8 +19,10 @@ We are likely at before v0.1.0. Which is... **very** early.
   - [ ] Type System Core
     - [x] Basic Primitive Types
       - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
+        - [x] Bitwise ops (`|`, `&`, `^`, `!`)
       - [x] Floats (`float`, `f32`, `f64`)
       - [x] Booleans
+        - [x] Logical ops (`or`, `and`, `xor`, `not`)
     - [ ] Type Inference
   - [ ] Mutation
     - [x] `=` Reassignment

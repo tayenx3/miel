@@ -38,7 +38,6 @@ impl SymbolMap {
     }
     
     pub fn find_symbol(&self, name: &lasso::Spur, ctx: &Context) -> Result<(&TypeId, Option<&ConstValue>, &Span), Option<(&lasso::Spur, f64)>> {
-        // this already checks if `name` is in scope or not
         let mut ty = None;
         let mut candidate = None;
         let mut last_score = 0.0;
