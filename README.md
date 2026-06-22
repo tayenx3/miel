@@ -1,40 +1,48 @@
 <div align="center">
     <h1>Miel</h1>
     <img src="https://img.shields.io/badge/license-Apache--2.0-blue">
-    <img src="https://img.shields.io/badge/status-0.0.1%20Pre--Alpha-purple" alt="status: 0.0.1 Pre-Alpha">
 </div>
 
 > **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. Syntax can change and documentation is nonexistent. Now is the perfect time to get involved to help Miel stabilize.
 
-A cozy systems programming language.
+A cozy, general-purpose programming language for creating provably safe and secure systems.
 
 ```haskell
-#Import "std/fs.mi"
-
-Add :: callable(a: int, b: int): int {
-    a + b
+cap Foo
+;; capability types help prove secure data access at compile-time
+Bar :: callable(n: Baz) @Foo {
+  ;; ...
 }
 
-;; permission types help prove secure data access at compile-time
-ReadFileToString :: callable(path: strbuf): strbuf @fs.FsRead {
-    ;; read file
+;; affine types allow for safe and efficient memory usage
+ #Affine
+ struct Baz @Foo {
+  a: int,
+  b: float,
+  c: bool,
 }
 
 Main :: callable() @Root {
-    x := 5                  ;; type inference
-    y: int = 10             ;; explicit typing
-    z := Add(x, Add(5, y))
+  acquire Foo from Root
+  baz := Baz {
+    a: 0,
+    b: 0.0,
+    c: false,
+  }
+  
+  Bar(baz)
+  Bar(baz) ;; error: `baz` was moved
 
-    data: box [u8; 1024] = box([0; 1024])
-    ;; affine types ensure memory safety
-    SomeOperation(data)
-    SomeOperation(data)     ;; error: `data` was already moved
+  quz := Baz {
+    a: 69,
+    b: 42.0,
+    c: true,
+  }
+  
+  release Foo ;; release when unneeded (or let the compiler implicitly release at the end of scope)
 
-    acquire fs.FsRead from Root
-    contents = ReadFileToString("config.toml")
-    release fs.FsRead       ;; release when not needed
-    
-    contents = ReadFileToString("config.toml")  ;; error: fs.FsRead is absent
+  Bar(quz) ;; error: usage of function `Bar` requires capability `Foo`
+  OtherOperation(quz) ;; error: usage of type `Baz` requires capability `Foo`
 }
 ```
 

@@ -2,9 +2,9 @@
 
 ## Where we are now
 
-We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
+We are likely at before v0.1.0. Which is... **very** early.
 
-## 0.1.0 Alpha
+## 0.1.0
 
 - [ ] Basic Compiler Core
   - [x] Lexer
@@ -17,85 +17,83 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
 - [ ] Core Language Features
   - [x] Comments (`;; ...`, `;[ ... ]`)
   - [ ] Type System Core
-    - [ ] Basic Primitive Types
+    - [x] Basic Primitive Types
       - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
       - [x] Floats (`float`, `f32`, `f64`)
       - [x] Booleans
-      - [ ] String Slices
-      - [ ] Pointer (`*T`)
-      - [ ] Structs and Enums
     - [ ] Type Inference
   - [ ] Mutation
-  - [ ] Memory Management
-    - [ ] Stack Allocation (Variables)
-    - [ ] `box T` Heap Allocation
-    - [ ] Dereference (`*ptr`)
-  - [ ] Functions
+  - [x] Functions
     - [x] `callable()` Type Syntax
-    - [ ] Parameters and Return Values
+    - [x] Parameters and Return Values
     - [x] Function Calls
-    - [ ] Multiple Functions
+    - [x] Multiple Functions
   - [ ] Control Flow
     - [x] If/else Conditionals
     - [x] While Loops
     - [ ] Return
     - [ ] Break/Continue
 
-## 0.2.0 Alpha
+## 0.2.0
 
 - [ ] Box (`box T`)
+- [ ] Pointer (`*T`)
+  - [ ] Dereference (`*ptr`)
+  - [ ] String Slices
 - [ ] Iterators
   - [ ] Iterator Definition API (not decided on yet)
   - [ ] Ranges
   - [ ] For Loops
 
-## 0.3.0 Alpha
+## 0.3.0
 
 - [ ] Constants with Compile-time Evaluation
 
-## 0.4.0 Alpha
+## 0.4.0
 
 - [ ] Result (`T ! E`)
   - [ ] Error Propagation
   - [ ] Expect/Unwrap
   - [ ] Map Ok
   - [ ] Map Err
-- [ ] Permission System
-  - [ ] `Root` Permission
-  - [ ] Custom Permission Definitions
-  - [ ] `@Permission` Syntax
+- [ ] Capability System
+  - [ ] `Root` Capability
+  - [ ] Custom Capability Definitions
+  - [ ] `@Capability` Syntax
   - [ ] `acquire`/`release` Syntax
 
-## 0.5.0 Alpha
+## 0.5.0
 
+- [ ] Structs and Enums
 - [ ] Affine Types
   - [ ] Affine Protection
-  - [ ] `#affine` Directive
-  - [ ] Permission Checking Pass
+  - [ ] `#Affine` Directive
+  - [ ] `@Capability` Syntax
+  - [ ] Capability Checking Pass
 
-## 0.6.0 Alpha
+## 0.6.0
 
 - [ ] Generics/Polymorphism
 
-## 0.7.0 Alpha
+## 0.7.0
 
 - [ ] Cross-Compilation
   - [ ] Target Triples (Windows/Linux/macOS)
   - [ ] `--target` Flag
 
-## 0.8.0 Alpha
+## 0.8.0
 
 - [ ] Module System
   - [ ] Basic Imports
   - [ ] Circular Imports
 
-## 0.9.0 Alpha
+## 0.9.0
 
 - [ ] Concurrency Basics
   - [ ] `spawn` keyword (goroutine/fiber style)
   - [ ] Channels (`chan T` type)
 
-## 0.10.0 Alpha
+## 0.10.0
 
 - [ ] Project System (combs) and Build System
 - [ ] Basic Standard Library
@@ -103,8 +101,8 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
     - [ ] `Print`/`PrintLn` Functions
     - [ ] `EPrint`/`EPrintLn` Functions
     - [ ] `ReadLine` Function
-    - [ ] `IoWrite` Permission
-    - [ ] `IoRead` Permission
+    - [ ] `IoWrite` Capability
+    - [ ] `IoRead` Capability
   - [ ] Collections (`std/collections`)
     - [ ] `Vec` Type
     - [ ] `Map` Type
@@ -115,20 +113,20 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
   - [ ] Time (`std/time`)
     - [ ] `TimePoint` Type
     - [ ] `TimeFrame` Type
-    - [ ] `TimeGet` Permission
+    - [ ] `TimeGet` Capability
   - [ ] File System (`std/fs`)
     - [ ] `File` Type
     - [ ] `ReadString`/`ReadBytes` Functions
     - [ ] `WriteString`/`WriteBytes` Functions
     - [ ] `Exists` Function
     - [ ] `Delete` Function
-    - [ ] `FsRead` Permission
-    - [ ] `FsWrite` Permission
-    - [ ] `FsOpen` Permission
-    - [ ] `FsDelete` Permission
+    - [ ] `FsRead` Capability
+    - [ ] `FsWrite` Capability
+    - [ ] `FsOpen` Capability
+    - [ ] `FsDelete` Capability
   - [ ] Random (`std/rand`)
     - [ ] `RandInt`/`RandRange`
-    - [ ] `RandomGen` Permission
+    - [ ] `RandomGen` Capability
   - [ ] Math (`std/math`)
     - [ ] Float Operations
     - [ ] Float Constants 
@@ -140,6 +138,6 @@ We are likely at 0.0.1 Pre-Alpha. Which is... **very** early.
       - [ ] Pythagoras' Constant
       - [ ] Catalan's Constant
 
-## 0.11.0-0.x.0 Alpha
+## 0.11.0-0.x.0
 
 - Stabilizations and polish
