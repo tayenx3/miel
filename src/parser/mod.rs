@@ -281,7 +281,17 @@ impl<'p> Parser<'p> {
         let mut stmts = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
             if tok.kind == TokenKind::RCurly { break }
-            stmts.push(self.parse_statement()?);
+            let expr = self.parse_expression(0)?;
+            if let Ok(Token { span: semi_span, .. }) = self.expect(TokenKind::Semicolon) {
+                let span = expr.span.concat(semi_span);
+                stmts.push(self.create_node(
+                    NodeKind::Semi(Box::new(expr)),
+                    span
+                ));
+            } else {
+                stmts.push(expr);
+                break;
+            }
         }
         span = span.concat(&self.expect(TokenKind::RCurly)?.span);
         Ok(self.create_node(
@@ -313,7 +323,17 @@ impl<'p> Parser<'p> {
         let mut body = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
             if tok.kind == TokenKind::RCurly { break }
-            body.push(self.parse_statement()?);
+            let expr = self.parse_expression(0)?;
+            if let Ok(Token { span: semi_span, .. }) = self.expect(TokenKind::Semicolon) {
+                let span = expr.span.concat(semi_span);
+                body.push(self.create_node(
+                    NodeKind::Semi(Box::new(expr)),
+                    span
+                ));
+            } else {
+                body.push(expr);
+                break;
+            }
         }
         body_span = body_span.concat(&self.expect(TokenKind::RCurly)?.span);
         span = span.concat(&body_span);

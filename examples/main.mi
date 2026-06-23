@@ -4,6 +4,6 @@ Add :: callable(a: int, b: int): int { a + b };
 
 Main :: callable() {
     result := Add(5, 3);
-    if result == 8 then 0;
+    if result == 8 then 0
     else 1;
 };

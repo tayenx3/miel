@@ -404,7 +404,7 @@ impl<'sch> SemaChecker<'sch> {
                     let ret_ty = self.ty_pool.get_type(&return_ty).unwrap();
                     if body_ty.is_coerceable_into(ret_ty) {
                         self.ty_pool.coerce_type(&last_ty, ret_ty.clone());
-                    } else {
+                    } else if *body_ty != Type::Never {
                         return Err(vec![Diag::error()
                             .with_message("Type mismatch")
                             .with_labels(vec![
@@ -885,7 +885,11 @@ impl<'sch> SemaChecker<'sch> {
             },
             NodeKind::Semi(stmt) => {
                 self.check_node(stmt)?;
-                self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
+                if *self.ty_pool.get_type(&self.type_map[&stmt.id]).unwrap() != Type::Never {
+                    self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
+                } else {
+                    self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+                }
                 Ok(())
             },
         }
