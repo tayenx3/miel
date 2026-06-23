@@ -384,7 +384,8 @@ impl<'p> Parser<'p> {
                     span
                 ))
             } else {
-                self.expect(TokenKind::Assign).map_err(|err| (err, true))?;
+                self.expect(TokenKind::Reassign(crate::common::ReassignmentOp::Assign))
+                    .map_err(|err| (err, true))?;
                 let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                 span = span.concat(&expr.span);
                 Ok(self.create_node(
@@ -402,12 +403,14 @@ impl<'p> Parser<'p> {
                 },
                 span
             ))
-        } else if self.expect(TokenKind::Assign).is_ok() {
+        } else if let Some(Token { kind: TokenKind::Reassign(op), span: op_span }) = self.tokens.get(self.pos) {
+            self.advance();
             let expr = self.parse_expression(0).map_err(|err| (err, true))?;
             span = span.concat(&expr.span);
             Ok(self.create_node(
                 NodeKind::Mutation {
                     name,
+                    op: (*op, *op_span),
                     expr: Box::new(expr)
                 },
                 span

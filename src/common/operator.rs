@@ -317,3 +317,77 @@ fn compare_tuples_ne(l: &[ConstValue], r: &[ConstValue]) -> Option<bool> {
     }
     Some(false)
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReassignmentOp {
+    Assign,
+    PlusEq, MinusEq, StarEq, SlashEq, ModuloEq,
+    PipeEq, AmpersandEq, CaretEq,
+}
+
+impl ReassignmentOp {
+    pub fn validate_reassignment(&self, original: &TypeId, expr: &TypeId, type_pool: &mut TypePool) -> bool {
+        let oty = type_pool.get_type(original).unwrap();
+        let ety = type_pool.get_type(expr).unwrap();
+        match self {
+            Self::Assign => if oty == ety {
+                true
+            } else if oty.is_coerceable_into(ety) {
+                type_pool.coerce_type(original, ety.clone());
+                true
+            } else if ety.is_coerceable_into(oty) {
+                type_pool.coerce_type(expr, oty.clone());
+                true
+            } else {
+                false
+            },
+            Self::PlusEq | Self::MinusEq | Self::StarEq
+            | Self::SlashEq | Self::ModuloEq => if oty.is_numeric() && ety.is_numeric() {
+                if oty == ety {
+                    true
+                } else if oty.is_coerceable_into(ety) {
+                    type_pool.coerce_type(original, ety.clone());
+                    true
+                } else if ety.is_coerceable_into(oty) {
+                    type_pool.coerce_type(expr, oty.clone());
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            },
+            Self::PipeEq | Self::AmpersandEq | Self::CaretEq => if oty.is_int() && ety.is_int() {
+                if oty == ety {
+                    true
+                } else if oty.is_coerceable_into(ety) {
+                    type_pool.coerce_type(original, ety.clone());
+                    true
+                } else if ety.is_coerceable_into(oty) {
+                    type_pool.coerce_type(expr, oty.clone());
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            },
+        }
+    }
+}
+
+impl fmt::Display for ReassignmentOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Assign => write!(f, "="),
+            Self::PlusEq => write!(f, "+="),
+            Self::MinusEq => write!(f, "-="),
+            Self::StarEq => write!(f, "*="),
+            Self::SlashEq => write!(f, "/="),
+            Self::ModuloEq => write!(f, "%="),
+            Self::PipeEq => write!(f, "|="),
+            Self::AmpersandEq => write!(f, "&="),
+            Self::CaretEq => write!(f, "^="),
+        }
+    }
+}

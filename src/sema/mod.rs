@@ -482,9 +482,9 @@ impl<'sch> SemaChecker<'sch> {
                             Label::primary(op_span.source_id, op_span.start..op_span.end)
                                 .with_message(format!("cannot do `{op}` infix operation on types `{lty_fmt}` and `{rty_fmt}`")),
                             Label::secondary(lhs.span.source_id, lhs.span.start..lhs.span.end)
-                                .with_message(format!("this has type `{lty_fmt}` here")),
+                                .with_message(format!("this has type `{lty_fmt}`")),
                             Label::secondary(rhs.span.source_id, rhs.span.start..rhs.span.end)
-                                .with_message(format!("this has type `{rty_fmt}` here")),
+                                .with_message(format!("this has type `{rty_fmt}`")),
                         ])])
                 }
             },
@@ -503,7 +503,7 @@ impl<'sch> SemaChecker<'sch> {
                             Label::primary(node.span.source_id, node.span.start..node.span.end)
                                 .with_message(format!("cannot do `{op}` prefix operation on types `{oty_fmt}`")),
                             Label::secondary(operand.span.source_id, operand.span.start..operand.span.end)
-                                .with_message(format!("operand with type `{oty_fmt}` here")),
+                                .with_message(format!("this has type `{oty_fmt}`")),
                         ])])
                 }
             },
@@ -647,13 +647,15 @@ impl<'sch> SemaChecker<'sch> {
                 self.type_map.insert(node.id, init_ty);
                 Ok(())
             },
-            NodeKind::Mutation { name, expr } => {
+            NodeKind::Mutation { name, op: (op, op_span), expr } => {
                 let mut errors = Vec::new();
                 if let Err(errs) = self.check_node(expr) {
                     errors.extend(errs);
                 }
                 match self.find_ident(name, node.span) {
                     Ok((ty_id, val, defined_at)) => {
+                        let ty_id = *ty_id;
+                        let defined_at = *defined_at;
                         if val.is_some() {
                             let rname = self.ctx.rodeo.resolve(name);
                             errors.push(
@@ -676,20 +678,8 @@ impl<'sch> SemaChecker<'sch> {
                                     )])
                             );
                         }
-                        let expr_ty_id = &self.type_map[&expr.id];
-                        let ty = self.ty_pool.get_type(ty_id).unwrap();
-                        let expr_ty = self.ty_pool.get_type(expr_ty_id).unwrap();
-                        if ty == expr_ty {
-                            self.type_map.insert(node.id, *ty_id);
-                            return Ok(());
-                        } else if ty.is_coerceable_into(expr_ty) {
-                            let ty_id = *ty_id;
-                            self.type_map.insert(node.id, *expr_ty_id);
-                            self.ty_pool.coerce_type(&ty_id, expr_ty.clone());
-                            return Ok(());
-                        } else if expr_ty.is_coerceable_into(ty) {
-                            let ty_id = *ty_id;
-                            self.ty_pool.coerce_type(expr_ty_id, ty.clone());
+                        let expr_ty_id = self.type_map[&expr.id];
+                        if op.validate_reassignment(&ty_id, &expr_ty_id, &mut self.ty_pool) {
                             self.type_map.insert(node.id, ty_id);
                             return Ok(());
                         } else {
@@ -697,11 +687,17 @@ impl<'sch> SemaChecker<'sch> {
                                 Diag::error()
                                     .with_message("Type mismatch")
                                     .with_labels(vec![
-                                        Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        Label::primary(op_span.source_id, op_span.start..op_span.end)
                                             .with_message(format!(
-                                                "expected `{}`, found `{}`",
-                                                ty.format(&self.ty_pool),
-                                                expr_ty.format(&self.ty_pool),
+                                                "cannot apply `{}` reassignment to type `{}` by type `{}`",
+                                                op,
+                                                self.ty_pool.get_type(&ty_id).unwrap().format(&self.ty_pool),
+                                                self.ty_pool.get_type(&expr_ty_id).unwrap().format(&self.ty_pool),
+                                            )),
+                                        Label::secondary(expr.span.source_id, expr.span.start..expr.span.end)
+                                            .with_message(format!(
+                                                "this has type `{}`",
+                                                self.ty_pool.get_type(&expr_ty_id).unwrap().format(&self.ty_pool),
                                             )),
                                         Label::secondary(defined_at.source_id, defined_at.start..defined_at.end)
                                             .with_message(format!(
@@ -915,9 +911,9 @@ impl<'sch> SemaChecker<'sch> {
                             Label::primary(op_span.source_id, op_span.start..op_span.end)
                                 .with_message(format!("cannot do `{op}` infix operation on types `{lty_fmt}` and `{rty_fmt}`")),
                             Label::secondary(lhs.span.source_id, lhs.span.start..lhs.span.end)
-                                .with_message(format!("left-hand-side expression with type `{lty_fmt}` here")),
+                                .with_message(format!("this has type `{lty_fmt}`")),
                             Label::secondary(rhs.span.source_id, rhs.span.start..rhs.span.end)
-                                .with_message(format!("right-hand-side expression with type `{rty_fmt}` here")),
+                                .with_message(format!("this has type `{rty_fmt}`")),
                         ])])
                 }
             },
@@ -936,7 +932,7 @@ impl<'sch> SemaChecker<'sch> {
                             Label::primary(node.span.source_id, node.span.start..node.span.end)
                                 .with_message(format!("cannot do `{op}` prefix operation on types `{oty_fmt}`")),
                             Label::secondary(operand.span.source_id, operand.span.start..operand.span.end)
-                                .with_message(format!("operand with type `{oty_fmt}` here")),
+                                .with_message(format!("this has type`{oty_fmt}`")),
                         ])])
                 }
             },

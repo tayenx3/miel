@@ -1,7 +1,7 @@
 pub mod token;
 
 use token::*;
-use crate::common::{Operator, Span, Diag, Label};
+use crate::common::{Diag, Label, Operator, ReassignmentOp, Span};
 
 fn skip_block_comment(
     source_id: usize,
@@ -47,26 +47,66 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     span: Span { start, end: start + ch.len_utf8(), source_id }
                 });
             },
-            '+' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Plus),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '-' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Minus),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '*' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Star),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '/' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Slash),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '%' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Modulo),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
+            '+' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::PlusEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Plus),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '-' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::MinusEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Minus),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '*' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::StarEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Star),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '/' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::SlashEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Slash),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '%' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::ModuloEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Modulo),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
             '(' => tokens.push(Token {
                 kind: TokenKind::LParen,
                 span: Span { start, end: start + ch.len_utf8(), source_id }
@@ -113,7 +153,7 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                 });
             } else {
                 tokens.push(Token {
-                    kind: TokenKind::Assign,
+                    kind: TokenKind::Reassign(ReassignmentOp::Assign),
                     span: Span { start, end: start + ch.len_utf8(), source_id }
                 });
             },
@@ -184,18 +224,42 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     span: Span { start, end, source_id }
                 });
             },
-            '|' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Pipe),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '&' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Ampersand),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
-            '^' => tokens.push(Token {
-                kind: TokenKind::Operator(Operator::Caret),
-                span: Span { start, end: start + ch.len_utf8(), source_id }
-            }),
+            '|' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::PipeEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Pipe),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '&' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::AmpersandEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Ampersand),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
+            '^' => if let Some(&(pos, '=')) = source_chars.peek() {
+                source_chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Reassign(ReassignmentOp::CaretEq),
+                    span: Span { start, end: pos + '='.len_utf8(), source_id }
+                });
+            } else {
+                tokens.push(Token {
+                    kind: TokenKind::Operator(Operator::Caret),
+                    span: Span { start, end: start + ch.len_utf8(), source_id }
+                });
+            },
             ch if ch.is_alphabetic() || ch == '_' => {
                 let mut end: usize = start + 1;
                 while let Some(&(pos, ch)) = source_chars.peek() {

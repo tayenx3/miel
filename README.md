@@ -22,8 +22,8 @@ Baz :: callable(n: Bar) @Foo {
   ;; ...
 }
 ;; lazy enforcement (checked at use-time)
-Qux :: callable(n: Bar) {
-  a := n ;; error: usage of type `Bar` requires capability `Foo`
+Qux :: callable(n: Bar) { ;; no error!
+  a := n ;; NOW error: usage of type `Bar` requires capability `Foo`
   ;; ...
 }
 

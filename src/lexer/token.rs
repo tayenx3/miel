@@ -1,4 +1,4 @@
-use crate::common::{Operator, Span};
+use crate::common::{Operator, ReassignmentOp, Span};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -7,9 +7,10 @@ pub enum TokenKind<'tok> {
     StringLit(&'tok str),
     Identifier(lasso::Spur),
     Operator(Operator),
+    Reassign(ReassignmentOp),
     LParen, RParen, LCurly, RCurly,
     Colon, Comma,
-    CColon, Walrus, Assign,
+    CColon, Walrus,
     Semicolon,
     KwCallable,
     KwNil,
@@ -25,6 +26,7 @@ impl<'tok> TokenKind<'tok> {
             Self::StringLit(i) => format!("\"{i}\""),
             Self::Identifier(s) => rodeo.resolve(s).to_string(),
             Self::Operator(o) => o.to_string(),
+            Self::Reassign(o) => o.to_string(),
             Self::LParen => "(".to_string(),
             Self::RParen => ")".to_string(),
             Self::LCurly => "{".to_string(),
@@ -33,7 +35,6 @@ impl<'tok> TokenKind<'tok> {
             Self::Comma => ",".to_string(),
             Self::CColon => "::".to_string(),
             Self::Walrus => ":=".to_string(),
-            Self::Assign => "=".to_string(),
             Self::Semicolon => ";".to_string(),
             Self::KwCallable => "callable".to_string(),
             Self::KwNil => "nil".to_string(),

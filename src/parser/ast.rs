@@ -1,4 +1,4 @@
-use crate::common::{Operator, Span};
+use crate::common::{Operator, ReassignmentOp, Span};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,6 +54,7 @@ pub enum NodeKind {
     },
     Mutation {
         name: lasso::Spur,
+        op: (ReassignmentOp, Span),
         expr: Box<Node>,
     },
 
