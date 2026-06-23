@@ -8,7 +8,7 @@
 A cozy, general-purpose programming language for creating provably safe and secure systems while maintaining ergonomics and practicality.
 
 ```haskell
-cap Foo
+cap Foo;
 
 ;; affine types allow for safe and efficient memory usage
 #Affine
@@ -16,39 +16,39 @@ struct Bar @Foo {
   a: int,
   b: float,
   c: bool,
-}
+};
 ;; capability types help prove secure data access at compile-time
 Baz :: callable(n: Bar) @Foo {
   ;; ...
-}
+};
 ;; lazy enforcement (checked at use-time)
 Qux :: callable(n: Bar) { ;; no error!
-  a := n ;; NOW error: usage of type `Bar` requires capability `Foo`
+  a := n; ;; NOW error: usage of type `Bar` requires capability `Foo`
   ;; ...
-}
+};
 
 Main :: callable() @Root {
-  acquire Foo from Root
+  acquire Foo from Root;
   bar := Bar {
     a: 0,
     b: 0.0,
     c: false,
-  }
+  };
   
-  Baz(bar)
-  Baz(bar) ;; error: `bar` was moved
+  Baz(bar);
+  Baz(bar); ;; error: `bar` was moved
 
   bar2 := Bar {
     a: 69,
     b: 42.0,
     c: true,
-  }
+  };
   
-  release Foo ;; release when unneeded (or let the compiler implicitly release at the end of scope)
+  release Foo; ;; release when unneeded (or let the compiler implicitly release at the end of scope)
 
-  Baz(bar2) ;; error: usage of function `Baz` requires capability `Foo`
-  Qux(bar2) ;; error: usage of type `Bar` requires capability `Foo`
-}
+  Baz(bar2); ;; error: usage of function `Baz` requires capability `Foo`
+  Qux(bar2); ;; error: usage of type `Bar` requires capability `Foo`
+};
 ```
 
 ## Why Miel?

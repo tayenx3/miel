@@ -17,6 +17,7 @@ pub struct PreDefinedTypes {
     pub f64_id: TypeId,
     pub bool_id: TypeId,
     pub nil_id: TypeId,
+    pub never_id: TypeId,
 }
 
 // ohno
@@ -91,6 +92,10 @@ impl TypePool {
         let nil_id = TypeId(next_id);
         next_id += 1;
         types.insert(nil_id, Type::Nil);
+        
+        let never_id = TypeId(next_id);
+        next_id += 1;
+        types.insert(never_id, Type::Never);
 
         Self {
             types, next_id,
@@ -99,7 +104,8 @@ impl TypePool {
                 i8_id, i16_id, i32_id, i64_id,
                 u8_id, u16_id, u32_id, u64_id,
                 float_id, f32_id, f64_id, bool_id,
-                nil_id
+                nil_id,
+                never_id
             },
         }
     }
@@ -135,6 +141,7 @@ pub enum Type {
     F32, F64,
     Bool,
     Nil,
+    Never,
     Tuple(Vec<TypeId>),
     Callable {
         params: Vec<TypeId>,
@@ -150,6 +157,7 @@ impl Type {
             | Self::I8 | Self::I16 | Self::I32 | Self::I64
             | Self::U8 | Self::U16 | Self::U32 | Self::U64
             | Self::AmbiguousFloat | Self::Float | Self::F32 | Self::F64
+            | Self::Never
         )
     }
 
@@ -159,19 +167,23 @@ impl Type {
             Self::AmbiguousInt | Self::Int
             | Self::I8 | Self::I16 | Self::I32 | Self::I64
             | Self::U8 | Self::U16 | Self::U32 | Self::U64
+            | Self::Never
         )
     }
     
     pub fn is_float(&self) -> bool {
         matches!(
             self,
-            Self::AmbiguousFloat | Self::Float | Self::F32 | Self::F64
+            Self::AmbiguousFloat | Self::Float
+            | Self::F32 | Self::F64
+            | Self::Never
         )
     }
 
     /// this checks if `self` can be coerced *into* `other`
     pub fn is_coerceable_into(&self, other: &Type) -> bool {
-        self == other
+        *other == Type::Never
+        || self == other
         || (*self == Type::AmbiguousInt && other.is_int())
         || (*self == Type::AmbiguousFloat && other.is_float())
     }
@@ -197,6 +209,7 @@ impl Type {
             Self::F64 => "f64".to_string(),
             Self::Bool => "bool".to_string(),
             Self::Nil => "nil".to_string(),
+            Self::Never => "!".to_string(),
             Self::Tuple(items) => {
                 let mut buf = String::new();
                 for (idx, item) in items.iter().enumerate() {

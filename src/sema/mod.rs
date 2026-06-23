@@ -1,15 +1,3 @@
-// For all who enter
-// this ill-begotten realm,
-// 
-// thou shalt not pass
-// and thou shalt not return.
-// 
-// Thou shalt be stuffed in this purgatory
-// 
-// 
-// forever
-// in eternity.
-
 pub mod symbol;
 pub mod ty;
 
@@ -28,7 +16,7 @@ const CANDIDATE_SCORE_THRESHOLD: f64 = 0.7;
 // each Vec<SymbolMap> represents a function's scope stack
 pub struct SemaChecker<'sch> {
     ctx: &'sch ContextMut<'sch>,
-    scope: Vec<Vec<SymbolMap>>,
+    scope: Vec<(Vec<SymbolMap>, Option<(TypeId, Span)>)>,
     ty_pool: TypePool,
     type_map: HashMap<NodeId, TypeId>,
     type_registry: HashMap<lasso::Spur, TypeId>,
@@ -58,7 +46,7 @@ impl<'sch> SemaChecker<'sch> {
         
         Self {
             ctx,
-            scope: vec![vec![SymbolMap::new()]],
+            scope: vec![(vec![SymbolMap::new()], None)],
             ty_pool,
             type_map: HashMap::new(),
             type_registry,
@@ -71,7 +59,8 @@ impl<'sch> SemaChecker<'sch> {
         let mut errors = Vec::new();
         for item in ast.0.iter() {
             match &item.kind {
-                NodeKind::ShortConstDecl { .. }
+                NodeKind::Semi(_)
+                | NodeKind::ShortConstDecl { .. }
                 | NodeKind::ConstDecl { .. } => {
                     if let Err(errs) = self.collect_constant(item) {
                         errors.extend(errs);
@@ -98,7 +87,7 @@ impl<'sch> SemaChecker<'sch> {
     fn find_ident(&self, i: &lasso::Spur, span: Span) -> Result<(&TypeId, Option<&ConstValue>, &Span), Diag> {
         let candidate = {
             let mut candidate = None;
-            for scope in self.scope.last().unwrap().iter().rev() {
+            for scope in self.scope.last().unwrap().0.iter().rev() {
                 match scope.find_symbol(i, &self.ctx.as_ctx()) {
                     Ok(v) => {
                         return Ok(v);
@@ -114,7 +103,7 @@ impl<'sch> SemaChecker<'sch> {
             }
             candidate
         };
-        match (self.scope.first().unwrap().first().unwrap().find_symbol(i, &self.ctx.as_ctx()), candidate) {
+        match (self.scope.first().unwrap().0.first().unwrap().find_symbol(i, &self.ctx.as_ctx()), candidate) {
             (Ok(v), _) => Ok(v),
             (Err(Some((candidate, a_score))), Some((c, b_score))) => {
                 // everyday i pray for the ability to name better variables
@@ -232,10 +221,15 @@ impl<'sch> SemaChecker<'sch> {
 
     fn collect_constant(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
         match &item.kind {
+            NodeKind::Semi(stmt) => {
+                self.collect_constant(stmt)?;
+                self.type_map.insert(item.id, self.ty_pool.predef_types.nil_id);
+                Ok(())
+            },
             NodeKind::ShortConstDecl { name, expr } => {
                 let mut errors = Vec::new();
                 if let Ok((_, _, defined_at)) = self.scope.first().unwrap()
-                    .first().unwrap()
+                    .0.first().unwrap()
                     .find_symbol(name, &self.ctx.as_ctx())
                 {
                     errors.push(Diag::error()
@@ -265,7 +259,7 @@ impl<'sch> SemaChecker<'sch> {
                         }
                         if !errors.is_empty() { return Err(errors) }
                         self.scope.last_mut().unwrap()
-                            .last_mut().unwrap()
+                            .0.last_mut().unwrap()
                             .define_constant(*name, init_ty_id, init_val, item.span);
                         let const_id = ConstId(self.next_constant_id);
                         self.next_constant_id += 1;
@@ -281,7 +275,7 @@ impl<'sch> SemaChecker<'sch> {
             NodeKind::ConstDecl { name, ty, expr } => {
                 let mut errors = Vec::new();
                 if let Ok((_, _, defined_at)) = self.scope.first().unwrap()
-                    .first().unwrap()
+                    .0.first().unwrap()
                     .find_symbol(name, &self.ctx.as_ctx())
                 {
                     errors.push(Diag::error()
@@ -349,11 +343,12 @@ impl<'sch> SemaChecker<'sch> {
                 }
 
                 self.scope.last_mut().unwrap()
-                    .last_mut().unwrap()
+                    .0.last_mut().unwrap()
                     .define_constant(*name, resolved_ty, init_val, item.span);
                 let const_id = ConstId(self.next_constant_id);
                 self.next_constant_id += 1;
                 self.constants.insert(item.id, const_id);
+                self.type_map.insert(item.id, self.ty_pool.predef_types.nil_id);
                 Ok(())
             },
             _ => Ok(())
@@ -362,19 +357,26 @@ impl<'sch> SemaChecker<'sch> {
 
     fn check_function(&mut self, item: &Node) -> Result<(), Vec<Diag>> {
         match &item.kind {
+            NodeKind::Semi(stmt) => {
+                self.check_function(stmt)?;
+                self.type_map.insert(item.id, self.ty_pool.predef_types.nil_id);
+                Ok(())
+            },
             NodeKind::ShortConstDecl { name, expr }
             | NodeKind::ConstDecl { name, expr, .. } => {
                 if let NodeKind::Callable { params, sig_span, body: (body, body_span), .. } = &expr.kind {
                     let mut errors = Vec::new();
-                    if let Ok(Type::Callable { params: param_tys, .. })
-                        = self.scope.last().unwrap().last().unwrap().find_symbol(name, &self.ctx.as_ctx())
+                    let mut return_ty = self.ty_pool.predef_types.nil_id;
+                    if let Ok(Type::Callable { params: param_tys, ret_ty })
+                        = self.scope.last().unwrap().0.last().unwrap().find_symbol(name, &self.ctx.as_ctx())
                             .map(|x| self.ty_pool.get_type(x.0).unwrap())
                     {
+                        return_ty = *ret_ty;
                         let mut smap = SymbolMap::new();
                         for (p, ty) in params.iter().zip(param_tys) {
                             smap.define_symbol(p.name, *ty, p.span);
                         }
-                        self.scope.push(vec![smap]);
+                        self.scope.push((vec![smap], Some((return_ty, *sig_span))));
                     }
                     for stmt in body {
                         if let Err(errs) = self.collect_constant(stmt) {
@@ -398,33 +400,28 @@ impl<'sch> SemaChecker<'sch> {
                     }
                     if !errors.is_empty() { return Err(errors) }
                     self.scope.pop();
-                    if let Ok(Type::Callable { ret_ty, .. })
-                        = self.scope.last().unwrap().last().unwrap().find_symbol(name, &self.ctx.as_ctx())
-                            .map(|x| self.ty_pool.get_type(x.0).unwrap())
-                    {
-                        let body_ty = self.ty_pool.get_type(&last_ty).unwrap();
-                        let ret_ty = self.ty_pool.get_type(ret_ty).unwrap();
-                        if body_ty.is_coerceable_into(ret_ty) {
-                            self.ty_pool.coerce_type(&last_ty, ret_ty.clone());
-                        } else {
-                            return Err(vec![Diag::error()
-                                .with_message("Type mismatch")
-                                .with_labels(vec![
-                                    Label::primary(
-                                        body_span.source_id,
-                                        body_span.start..body_span.end
-                                    ).with_message(format!(
-                                        "expected `{}`, found `{}`",
-                                        ret_ty.format(&self.ty_pool),
-                                        body_ty.format(&self.ty_pool)
-                                    )),
-                                    Label::secondary(
-                                        sig_span.source_id,
-                                        sig_span.start..sig_span.end
-                                    ).with_message("signature was defined here")
-                                ])
-                            ]);
-                        }
+                    let body_ty = self.ty_pool.get_type(&last_ty).unwrap();
+                    let ret_ty = self.ty_pool.get_type(&return_ty).unwrap();
+                    if body_ty.is_coerceable_into(ret_ty) {
+                        self.ty_pool.coerce_type(&last_ty, ret_ty.clone());
+                    } else {
+                        return Err(vec![Diag::error()
+                            .with_message("Type mismatch")
+                            .with_labels(vec![
+                                Label::primary(
+                                    body_span.source_id,
+                                    body_span.start..body_span.end
+                                ).with_message(format!(
+                                    "expected `{}`, found `{}`",
+                                    ret_ty.format(&self.ty_pool),
+                                    body_ty.format(&self.ty_pool)
+                                )),
+                                Label::secondary(
+                                    sig_span.source_id,
+                                    sig_span.start..sig_span.end
+                                ).with_message("signature was defined here")
+                            ])
+                        ]);
                     }
                 }
                 Ok(())
@@ -527,14 +524,14 @@ impl<'sch> SemaChecker<'sch> {
             NodeKind::Block(items) => {
                 let mut errors = Vec::new();
                 let mut last_ty = self.ty_pool.predef_types.nil_id;
-                self.scope.last_mut().unwrap().push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
                 for i in items {
                     match self.check_node(i) {
                         Ok(()) => last_ty = self.type_map[&i.id],
                         Err(errs) => errors.extend(errs),
                     }
                 }
-                self.scope.last_mut().unwrap().pop();
+                self.scope.last_mut().unwrap().0.pop();
                 if !errors.is_empty() { return Err(errors) }
                 self.type_map.insert(node.id, last_ty);
                 Ok(())
@@ -609,7 +606,7 @@ impl<'sch> SemaChecker<'sch> {
             NodeKind::ShortVarDecl { name, expr } => {
                 self.check_node(expr)?;
                 let ty = self.type_map[&expr.id];
-                self.scope.last_mut().unwrap().last_mut().unwrap()
+                self.scope.last_mut().unwrap().0.last_mut().unwrap()
                     .define_symbol(*name, ty, node.span);
                 self.type_map.insert(node.id, ty);
                 Ok(())
@@ -646,7 +643,7 @@ impl<'sch> SemaChecker<'sch> {
                         ])]);
                 }
                 
-                self.scope.last_mut().unwrap().last_mut().unwrap()
+                self.scope.last_mut().unwrap().0.last_mut().unwrap()
                     .define_symbol(*name, init_ty, node.span);
                 self.type_map.insert(node.id, init_ty);
                 Ok(())
@@ -725,7 +722,7 @@ impl<'sch> SemaChecker<'sch> {
                     errors.extend(errs);
                 } else {
                     let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
-                    if *cond_ty != Type::Bool {
+                    if *cond_ty != Type::Bool && *cond_ty != Type::Never {
                         errors.push(
                             Diag::error()
                                 .with_message("Type mismatch")
@@ -742,19 +739,19 @@ impl<'sch> SemaChecker<'sch> {
                         );
                     }
                 }
-                self.scope.last_mut().unwrap().push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
                 if let Err(errs) = self.check_node(then) {
                     errors.extend(errs);
                 }
                 self.scope.last_mut().unwrap()
-                    .last_mut().unwrap()
+                    .0.last_mut().unwrap()
                     .clear();
                 if let Some(expr) = else_ {
                     if let Err(errs) = self.check_node(expr) {
                         errors.extend(errs);
                     }
                 }
-                self.scope.last_mut().unwrap().pop();
+                self.scope.last_mut().unwrap().0.pop();
                 if !errors.is_empty() {
                     return Err(errors);
                 }
@@ -788,7 +785,7 @@ impl<'sch> SemaChecker<'sch> {
                                 )])
                         );
                     }
-                } else if *then_ty != Type::Nil {
+                } else if *then_ty != Type::Nil && *then_ty != Type::Never {
                     errors.push(
                         Diag::error()
                             .with_message("Missing clause")
@@ -814,7 +811,7 @@ impl<'sch> SemaChecker<'sch> {
                     errors.extend(errs);
                 } else {
                     let cond_ty = self.ty_pool.get_type(&self.type_map[&cond.id]).unwrap();
-                    if *cond_ty != Type::Bool {
+                    if *cond_ty != Type::Bool && *cond_ty != Type::Never {
                         errors.push(
                             Diag::error()
                                 .with_message("Type mismatch")
@@ -831,12 +828,63 @@ impl<'sch> SemaChecker<'sch> {
                         );
                     }
                 }
-                self.scope.last_mut().unwrap().push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
                 if let Err(errs) = self.check_node(body) {
                     errors.extend(errs);
                 }
-                self.scope.last_mut().unwrap().pop();
+                self.scope.last_mut().unwrap().0.pop();
                 if !errors.is_empty() { return Err(errors) }
+                self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
+                Ok(())
+            },
+            NodeKind::Return(expr) => {
+                if let Some(expr) = expr {
+                    self.check_node(expr)?;
+                    let expr_ty_id = &self.type_map[&expr.id];
+                    let expr_ty = self.ty_pool.get_type(expr_ty_id).unwrap();
+                    if let Some((ret_ty_id, sig_span)) = self.scope.last().unwrap().1.as_ref() {
+                        let ret_ty = self.ty_pool.get_type(ret_ty_id).unwrap();
+                        if expr_ty.is_coerceable_into(ret_ty) {
+                            self.ty_pool.coerce_type(expr_ty_id, ret_ty.clone());
+                        } else if ret_ty.is_coerceable_into(expr_ty) {
+                            self.ty_pool.coerce_type(ret_ty_id, expr_ty.clone());
+                        } else {
+                            return Err(vec![
+                                Diag::error()
+                                    .with_message("Type mismatch")
+                                    .with_labels(vec![
+                                        Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                            .with_message(format!(
+                                                "expected `{}`, found `{}`",
+                                                ret_ty.format(&self.ty_pool),
+                                                expr_ty.format(&self.ty_pool),
+                                            )),
+                                        Label::secondary(sig_span.source_id, sig_span.start..sig_span.end)
+                                            .with_message("function defined here")
+                                    ])
+                            ]);
+                        }
+                    }
+                } else if let Some((ty_id, sig_span)) = self.scope.last().unwrap().1.as_ref() {
+                    let ty = self.ty_pool.get_type(ty_id).unwrap();
+                    if *ty != Type::Nil {
+                        return Err(vec![
+                            Diag::error()
+                                .with_message("Type mismatch")
+                                .with_labels(vec![
+                                    Label::primary(node.span.source_id, node.span.start..node.span.end)
+                                        .with_message(format!("expected `{}`, found `nil`", ty.format(&self.ty_pool))),
+                                    Label::secondary(sig_span.source_id, sig_span.start..sig_span.end)
+                                        .with_message("function defined here")
+                                ])
+                        ]);
+                    }
+                }
+                self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+                Ok(())
+            },
+            NodeKind::Semi(stmt) => {
+                self.check_node(stmt)?;
                 self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
                 Ok(())
             },
@@ -999,6 +1047,12 @@ impl<'sch> SemaChecker<'sch> {
                 });
                 self.type_map.insert(node.id, ty_id);
                 Ok((ty_id, value))
+            },
+            NodeKind::Semi(stmt) => {
+                self.check_node(stmt)?;
+                let ty_id = self.ty_pool.predef_types.nil_id;
+                self.type_map.insert(node.id, ty_id);
+                Ok((ty_id, ConstValue::Nil))
             },
             // todo: check for calls to constant functions
             _ => Err(vec![Diag::error()

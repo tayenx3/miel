@@ -16,6 +16,7 @@ pub enum TokenKind<'tok> {
     KwNil,
     KwIf, KwThen, KwElse,
     KwWhile, KwDo,
+    KwReturn,
 }
 
 impl<'tok> TokenKind<'tok> {
@@ -46,6 +47,7 @@ impl<'tok> TokenKind<'tok> {
             Self::KwElse => "else".to_string(),
             Self::KwWhile => "while".to_string(),
             Self::KwDo => "do".to_string(),
+            Self::KwReturn => "return".to_string(),
         }
     }
 }

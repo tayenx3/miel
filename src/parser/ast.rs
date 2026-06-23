@@ -31,6 +31,7 @@ pub enum NodeKind {
     },
     Tuple(Vec<Node>),
     Block(Vec<Node>),
+    Semi(Box<Node>),
 
     Callable {
         params: Vec<Param>,
@@ -76,7 +77,8 @@ pub enum NodeKind {
     While {
         cond: Box<Node>,
         body: Box<Node>,
-    }
+    },
+    Return(Option<Box<Node>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

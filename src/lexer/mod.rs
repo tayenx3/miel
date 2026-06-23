@@ -281,6 +281,7 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     "else" => TokenKind::KwElse,
                     "while" => TokenKind::KwWhile,
                     "do" => TokenKind::KwDo,
+                    "return" => TokenKind::KwReturn,
                     "or" => TokenKind::Operator(Operator::KwOr),
                     "and" => TokenKind::Operator(Operator::KwAnd),
                     "xor" => TokenKind::Operator(Operator::KwXor),

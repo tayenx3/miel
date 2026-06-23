@@ -5,9 +5,9 @@
 ;; Before you name your tools,
 ;;      you must declare your intent.
 
-#Import "std/io"
+#Import "std/io";
 
 Main :: callable() @Root {
-    acquire io.IoWrite from Root
-    io.PrintLn("Hello, world!")
-}
+    acquire io.IoWrite from Root;
+    io.PrintLn("Hello, world!");
+};

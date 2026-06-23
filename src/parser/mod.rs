@@ -111,10 +111,16 @@ impl<'p> Parser<'p> {
         let mut nodes = Vec::new();
 
         while self.tokens.get(self.pos).is_some() {
-            nodes.push(self.parse_expression(0)?);
+            nodes.push(self.parse_statement()?);
         }
 
         return Ok(Ast(nodes.into()))
+    }
+
+    fn parse_statement(&mut self) -> Result<Node, Diag> {
+        let node = self.parse_expression(0)?;
+        let span = node.span.concat(&self.expect(TokenKind::Semicolon)?.span);
+        Ok(self.create_node(NodeKind::Semi(Box::new(node)), span))
     }
 
     fn parse_expression(&mut self, min_bp: usize) -> Result<Node, Diag> {
@@ -236,6 +242,7 @@ impl<'p> Parser<'p> {
             },
             TokenKind::KwIf => self.parse_if(),
             TokenKind::KwWhile => self.parse_while(),
+            TokenKind::KwReturn => self.parse_return(),
             other => Err(Diag::error()
                 .with_message(format!("Unexpected `{}`", other.format(self.ctx.rodeo)))
                 .with_labels(vec![
@@ -274,7 +281,7 @@ impl<'p> Parser<'p> {
         let mut stmts = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
             if tok.kind == TokenKind::RCurly { break }
-            stmts.push(self.parse_expression(0)?);
+            stmts.push(self.parse_statement()?);
         }
         span = span.concat(&self.expect(TokenKind::RCurly)?.span);
         Ok(self.create_node(
@@ -306,7 +313,7 @@ impl<'p> Parser<'p> {
         let mut body = Vec::new();
         while let Some(tok) = self.tokens.get(self.pos) {
             if tok.kind == TokenKind::RCurly { break }
-            body.push(self.parse_expression(0)?);
+            body.push(self.parse_statement()?);
         }
         body_span = body_span.concat(&self.expect(TokenKind::RCurly)?.span);
         span = span.concat(&body_span);
@@ -462,5 +469,23 @@ impl<'p> Parser<'p> {
             NodeKind::While { cond, body },
             span
         ))
+    }
+
+    fn parse_return(&mut self) -> Result<Node, Diag> {
+        let mut span = self.expect(TokenKind::KwReturn)?.span;
+        let prev_pos = self.pos;
+        if let Ok(expr) = self.parse_expression(0) {
+            span = span.concat(&expr.span);
+            Ok(self.create_node(
+                NodeKind::Return(Some(Box::new(expr))),
+                span
+            ))
+        } else {
+            self.pos = prev_pos;
+            Ok(self.create_node(
+                NodeKind::Return(None),
+                span
+            ))
+        }
     }
 }

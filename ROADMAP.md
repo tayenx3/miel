@@ -36,7 +36,7 @@ We are likely at before v0.1.0. Which is... **very** early.
   - [ ] Control Flow
     - [x] If/else Conditionals
     - [x] While Loops
-    - [ ] Return
+    - [x] Return
     - [ ] Break/Continue
 
 ## 0.2.0
@@ -56,7 +56,7 @@ We are likely at before v0.1.0. Which is... **very** early.
 
 ## 0.4.0
 
-- [ ] Result (`T ! E`)
+- [ ] Result (`T ? E`)
   - [ ] Error Propagation
   - [ ] Expect/Unwrap
   - [ ] Map Ok
