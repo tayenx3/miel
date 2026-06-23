@@ -4,20 +4,31 @@ use crate::parser::ast::Node;
 
 use super::ty::TypeId;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ScopeContext {
+    Loop, Normal
+}
+
 #[derive(Debug)]
 pub struct SymbolMap {
     types: HashMap<lasso::Spur, TypeId>,
     constants: HashMap<lasso::Spur, ConstValue>,
-    defined_at: HashMap<lasso::Spur, Span>
+    defined_at: HashMap<lasso::Spur, Span>,
+    ctx: ScopeContext,
 }
 
 impl SymbolMap {
-    pub fn new() -> Self {
+    pub fn new(ctx: ScopeContext) -> Self {
         Self {
             types: HashMap::new(),
             constants: HashMap::new(),
             defined_at: HashMap::new(),
+            ctx
         }
+    }
+
+    pub fn is_loop(&self) -> bool {
+        matches!(self.ctx, ScopeContext::Loop)
     }
 
     pub fn clear(&mut self) {

@@ -79,6 +79,7 @@ pub enum NodeKind {
         body: Box<Node>,
     },
     Return(Option<Box<Node>>),
+    Break, Continue,
 }
 
 #[derive(Debug, Clone, PartialEq)]

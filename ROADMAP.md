@@ -33,11 +33,11 @@ We are likely at before v0.1.0. Which is... **very** early.
     - [x] Parameters and Return Values
     - [x] Function Calls
     - [x] Multiple Functions
-  - [ ] Control Flow
+  - [x] Control Flow
     - [x] If/else Conditionals
     - [x] While Loops
     - [x] Return
-    - [ ] Break/Continue
+    - [x] Break/Continue
 
 ## 0.2.0
 

@@ -243,6 +243,20 @@ impl<'p> Parser<'p> {
             TokenKind::KwIf => self.parse_if(),
             TokenKind::KwWhile => self.parse_while(),
             TokenKind::KwReturn => self.parse_return(),
+            TokenKind::KwBreak => {
+                self.advance();
+                Ok(self.create_node(
+                    NodeKind::Break,
+                    tok.span
+                ))
+            },
+            TokenKind::KwContinue => {
+                self.advance();
+                Ok(self.create_node(
+                    NodeKind::Continue,
+                    tok.span
+                ))
+            },
             other => Err(Diag::error()
                 .with_message(format!("Unexpected `{}`", other.format(self.ctx.rodeo)))
                 .with_labels(vec![

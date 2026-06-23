@@ -1,7 +1,9 @@
 Main :: callable() {
     i := 0;
     while i < 10 do {
-        if i >= 5 then return;
+        if i == 5 then continue;
+        if i == 6 then break;
+        if i == 7 then return;
         i += 1;
     };
 };

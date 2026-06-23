@@ -46,7 +46,7 @@ impl<'sch> SemaChecker<'sch> {
         
         Self {
             ctx,
-            scope: vec![(vec![SymbolMap::new()], None)],
+            scope: vec![(vec![SymbolMap::new(ScopeContext::Normal)], None)],
             ty_pool,
             type_map: HashMap::new(),
             type_registry,
@@ -372,7 +372,7 @@ impl<'sch> SemaChecker<'sch> {
                             .map(|x| self.ty_pool.get_type(x.0).unwrap())
                     {
                         return_ty = *ret_ty;
-                        let mut smap = SymbolMap::new();
+                        let mut smap = SymbolMap::new(ScopeContext::Normal);
                         for (p, ty) in params.iter().zip(param_tys) {
                             smap.define_symbol(p.name, *ty, p.span);
                         }
@@ -524,7 +524,7 @@ impl<'sch> SemaChecker<'sch> {
             NodeKind::Block(items) => {
                 let mut errors = Vec::new();
                 let mut last_ty = self.ty_pool.predef_types.nil_id;
-                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new(ScopeContext::Normal));
                 for i in items {
                     match self.check_node(i) {
                         Ok(()) => last_ty = self.type_map[&i.id],
@@ -534,6 +534,15 @@ impl<'sch> SemaChecker<'sch> {
                 self.scope.last_mut().unwrap().0.pop();
                 if !errors.is_empty() { return Err(errors) }
                 self.type_map.insert(node.id, last_ty);
+                Ok(())
+            },
+            NodeKind::Semi(stmt) => {
+                self.check_node(stmt)?;
+                if *self.ty_pool.get_type(&self.type_map[&stmt.id]).unwrap() != Type::Never {
+                    self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
+                } else {
+                    self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+                }
                 Ok(())
             },
             NodeKind::Callable { .. } => Ok(()),
@@ -739,7 +748,7 @@ impl<'sch> SemaChecker<'sch> {
                         );
                     }
                 }
-                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new(ScopeContext::Normal));
                 if let Err(errs) = self.check_node(then) {
                     errors.extend(errs);
                 }
@@ -828,7 +837,7 @@ impl<'sch> SemaChecker<'sch> {
                         );
                     }
                 }
-                self.scope.last_mut().unwrap().0.push(SymbolMap::new());
+                self.scope.last_mut().unwrap().0.push(SymbolMap::new(ScopeContext::Loop));
                 if let Err(errs) = self.check_node(body) {
                     errors.extend(errs);
                 }
@@ -883,14 +892,41 @@ impl<'sch> SemaChecker<'sch> {
                 self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
                 Ok(())
             },
-            NodeKind::Semi(stmt) => {
-                self.check_node(stmt)?;
-                if *self.ty_pool.get_type(&self.type_map[&stmt.id]).unwrap() != Type::Never {
-                    self.type_map.insert(node.id, self.ty_pool.predef_types.nil_id);
-                } else {
-                    self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+            NodeKind::Break => {
+                let fscope = &self.scope.last().unwrap().0;
+                for scope in fscope {
+                    if scope.is_loop() {
+                        self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+                        return Ok(());
+                    }
                 }
-                Ok(())
+                Err(vec![Diag::error()
+                    .with_message("`break` not in loop")
+                    .with_labels(vec![
+                        Label::primary(node.span.source_id, node.span.start..node.span.end)
+                            .with_message("this `break` statement is not in a loop"),
+                    ]).with_notes(vec![format!(
+                        "{}: `break` statements must in a loop",
+                        "note".blue().bold().underline(),
+                    )])])
+            },
+            NodeKind::Continue => {
+                let fscope = &self.scope.last().unwrap().0;
+                for scope in fscope {
+                    if scope.is_loop() {
+                        self.type_map.insert(node.id, self.ty_pool.predef_types.never_id);
+                        return Ok(());
+                    }
+                }
+                Err(vec![Diag::error()
+                    .with_message("`continue` not in loop")
+                    .with_labels(vec![
+                        Label::primary(node.span.source_id, node.span.start..node.span.end)
+                            .with_message("this `continue` statement is not in a loop"),
+                    ]).with_notes(vec![format!(
+                        "{}: `continue` statements must in a loop",
+                        "note".blue().bold().underline(),
+                    )])])
             },
         }
     }
