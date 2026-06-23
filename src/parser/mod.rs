@@ -191,6 +191,13 @@ impl<'p> Parser<'p> {
                     tok.span
                 ))
             },
+            TokenKind::BoolLit(i) => {
+                self.advance();
+                Ok(self.create_node(
+                    NodeKind::BoolLit(*i),
+                    tok.span
+                ))
+            },
             TokenKind::StringLit(i) => {
                 self.advance();
                 Ok(self.create_node(

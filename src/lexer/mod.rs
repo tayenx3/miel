@@ -272,6 +272,8 @@ pub fn tokenize<'lex>(source_id: usize, source: &'lex str, rodeo: &mut lasso::Ro
                     source_chars.next();
                 }
                 let kind = match &source[start..end] {
+                    "true" => TokenKind::BoolLit(true),
+                    "false" => TokenKind::BoolLit(false),
                     "callable" => TokenKind::KwCallable,
                     "nil" => TokenKind::KwNil,
                     "if" => TokenKind::KwIf,

@@ -445,6 +445,10 @@ impl<'sch> SemaChecker<'sch> {
                 self.type_map.insert(node.id, t_id);
                 Ok(())
             },
+            NodeKind::BoolLit(_) => {
+                self.type_map.insert(node.id, self.ty_pool.predef_types.bool_id);
+                Ok(())
+            },
             NodeKind::StringLit(_) => todo!("strings"),
             NodeKind::Identifier(i) => {
                 self.type_map.insert(
@@ -850,6 +854,11 @@ impl<'sch> SemaChecker<'sch> {
                 let t_id = self.ty_pool.create_type(Type::AmbiguousFloat);
                 self.type_map.insert(node.id, t_id);
                 Ok((t_id, ConstValue::Float(*i)))
+            },
+            NodeKind::BoolLit(i) => {
+                let t_id = self.ty_pool.predef_types.bool_id;
+                self.type_map.insert(node.id, t_id);
+                Ok((t_id, ConstValue::Bool(*i)))
             },
             NodeKind::StringLit(_) => todo!("strings"),
             NodeKind::Identifier(i) => {

@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenKind<'tok> {
     IntLit(i64), FloatLit(f64),
-    StringLit(&'tok str),
+    BoolLit(bool), StringLit(&'tok str),
     Identifier(lasso::Spur),
     Operator(Operator),
     Reassign(ReassignmentOp),
@@ -23,6 +23,9 @@ impl<'tok> TokenKind<'tok> {
         match self {
             Self::IntLit(i) => i.to_string(),
             Self::FloatLit(i) => i.to_string(),
+            Self::BoolLit(i) => i.then(|| "true")
+                .unwrap_or("false")
+                .to_string(),
             Self::StringLit(i) => format!("\"{i}\""),
             Self::Identifier(s) => rodeo.resolve(s).to_string(),
             Self::Operator(o) => o.to_string(),
