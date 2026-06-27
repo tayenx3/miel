@@ -16,7 +16,7 @@ pub struct Param {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
-    IntLit(i64), FloatLit(f64),
+    IntLit(lasso::Spur), FloatLit(lasso::Spur),
     BoolLit(bool), StringLit(String),
     Identifier(lasso::Spur),
     Nil,

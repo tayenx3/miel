@@ -9,35 +9,35 @@ We are likely at before v0.1.0. Which is... **very** early.
 - [ ] Basic Compiler Core
   - [x] Lexer
   - [x] Parser
-  - [x] Semantic Analysis
-  - [ ] IR
+  - [ ] MIR (codenamed Honey)
     - [ ] Code Generation
     - [ ] Optimization Passes
+    - [ ] Semantic Analysis
   - [ ] Native Machine Code Generation
 - [ ] Core Language Features
   - [x] Comments (`;; ...`, `;[ ... ]`)
-  - [x] Type System Core
-    - [x] Basic Primitive Types
-      - [x] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
-        - [x] Bitwise ops (`|`, `&`, `^`, `!`)
-      - [x] Floats (`float`, `f32`, `f64`)
-      - [x] Booleans
-        - [x] Logical ops (`or`, `and`, `xor`, `not`)
-    - [x] Basic Type Inference
-  - [x] Basic Compile-Time Evaluation for Simple Expressions
-  - [x] Mutation
-    - [x] `=` Reassignment
-    - [x] Augmented Operators
-  - [x] Functions
+  - [ ] Type System Core
+    - [ ] Basic Primitive Types
+      - [ ] Integers (`int`, `uint`, `i8`-`i64`, `u8`-`u64`)
+        - [ ] Bitwise ops (`|`, `&`, `^`, `!`)
+      - [ ] Floats (`float`, `f32`, `f64`)
+      - [ ] Booleans
+        - [ ] Logical ops (`or`, `and`, `xor`, `not`)
+    - [ ] Basic Type Inference
+  - [ ] Basic Compile-Time Evaluation for Simple Expressions
+  - [ ] Mutation
+    - [ ] `=` Reassignment
+    - [ ] Augmented Operators
+  - [ ] Functions
     - [x] `callable()` Type Syntax
-    - [x] Parameters and Return Values
-    - [x] Function Calls
-    - [x] Multiple Functions
-  - [x] Control Flow
-    - [x] If/else Conditionals
-    - [x] While Loops
-    - [x] Return
-    - [x] Break/Continue
+    - [ ] Parameters and Return Values
+    - [ ] Function Calls
+    - [ ] Multiple Functions
+  - [ ] Control Flow
+    - [ ] If/else Conditionals
+    - [ ] While Loops
+    - [ ] Return
+    - [ ] Break/Continue
 
 ## 0.2.0
 

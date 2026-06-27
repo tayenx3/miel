@@ -1,3 +1,5 @@
+// todo: ADD TESTS!!!
+
 pub mod ast;
 
 use crate::lexer::token::{Token, TokenKind};
@@ -6,13 +8,13 @@ use ast::*;
 
 pub struct Parser<'p> {
     ctx: &'p Context<'p>,
-    tokens: &'p [Token<'p>],
+    tokens: &'p [Token],
     pos: usize,
     next_node_id: usize,
 }
 
 impl<'p> Parser<'p> {
-    pub fn new(ctx: &'p Context<'p>, tokens: &'p [Token<'p>]) -> Self {
+    pub fn new(ctx: &'p Context<'p>, tokens: &'p [Token]) -> Self {
         Self {
             ctx, tokens,
             pos: 0usize,
@@ -29,7 +31,7 @@ impl<'p> Parser<'p> {
     #[inline]
     fn advance(&mut self) { self.pos += 1 }
     #[inline]
-    fn expect(&mut self, expected: TokenKind) -> Result<&Token<'p>, Diag> {
+    fn expect(&mut self, expected: TokenKind) -> Result<&Token, Diag> {
         match self.tokens.get(self.pos) {
             Some(tok) if tok.kind == expected => {
                 self.advance();
@@ -62,7 +64,7 @@ impl<'p> Parser<'p> {
         }
     }
     #[inline]
-    fn expect_any_without_advance(&mut self, expected: &str) -> Result<&Token<'p>, Diag> {
+    fn expect_any_without_advance(&mut self, expected: &str) -> Result<&Token, Diag> {
         self.tokens.get(self.pos)
             .ok_or_else(|| {
                 let span = self.tokens.last()
@@ -126,6 +128,15 @@ impl<'p> Parser<'p> {
     fn parse_expression(&mut self, min_bp: usize) -> Result<Node, Diag> {
         let prev_pos = self.pos;
         let prev_node_id = self.next_node_id;
+        
+        match self.try_parse_mutation() {
+            Ok(decl) => return Ok(decl),
+            Err((d, likelihood)) => if likelihood {
+                return Err(d);
+            }
+        }
+        self.pos = prev_pos;
+        self.next_node_id = prev_node_id;
         
         match self.try_parse_decl() {
             Ok(decl) => return Ok(decl),
@@ -207,7 +218,7 @@ impl<'p> Parser<'p> {
             TokenKind::StringLit(i) => {
                 self.advance();
                 Ok(self.create_node(
-                    NodeKind::StringLit(i.to_string()),
+                    NodeKind::StringLit(self.ctx.rodeo.resolve(i).to_string()),
                     tok.span
                 ))
             },
@@ -272,22 +283,25 @@ impl<'p> Parser<'p> {
     fn parse_paren(&mut self) -> Result<Node, Diag> {
         let mut span = self.expect(TokenKind::LParen)?.span;
         let mut items = Vec::new();
+        let mut is_tuple = false;
         while self.tokens.get(self.pos).is_some() {
-            let expr = self.parse_expression(0)?;
-            if self.expect(TokenKind::Comma).is_err() {
-                self.expect(TokenKind::RParen)?;
-                return Ok(expr);
-            }
-            items.push(expr);
-            if let Some(Token { kind: TokenKind::RParen, .. }) = self.tokens.get(self.pos) {
+            items.push(self.parse_expression(0)?);
+            if self.expect(TokenKind::Comma).is_ok() {
+                is_tuple = true;
+            } else {
                 break;
             }
         }
         span = span.concat(&self.expect(TokenKind::RParen)?.span);
-        Ok(self.create_node(
-            NodeKind::Tuple(items),
-            span,
-        ))
+        if is_tuple {
+            Ok(self.create_node(
+                NodeKind::Tuple(items),
+                span,
+            ))
+        } else {
+            // just `items[0]` throws an error because of borrow issues
+            Ok(items.into_iter().next().unwrap())
+        }
     }
 
     fn parse_block(&mut self) -> Result<Node, Diag> {
@@ -391,22 +405,25 @@ impl<'p> Parser<'p> {
     fn parse_type_paren(&mut self) -> Result<ParsedType, Diag> {
         let mut span = self.expect(TokenKind::LParen)?.span;
         let mut items = Vec::new();
+        let mut is_tuple = false;
         while self.tokens.get(self.pos).is_some() {
-            let expr = self.parse_type()?;
-            if self.expect(TokenKind::Comma).is_err() {
-                self.expect(TokenKind::RParen)?;
-                return Ok(expr);
-            }
-            items.push(expr);
-            if let Some(Token { kind: TokenKind::RParen, .. }) = self.tokens.get(self.pos) {
+            items.push(self.parse_type()?);
+            if self.expect(TokenKind::Comma).is_ok() {
+                is_tuple = true;
+            } else {
                 break;
             }
         }
         span = span.concat(&self.expect(TokenKind::RParen)?.span);
-        Ok(ParsedType {
-            kind: ParsedTypeKind::Tuple(items),
-            span,
-        })
+        if is_tuple {
+            Ok(ParsedType {
+                kind: ParsedTypeKind::Tuple(items),
+                span,
+            })
+        } else {
+            // just `items[0]` throws an error because of borrow issues
+            Ok(items.into_iter().next().unwrap())
+        }
     }
 
     fn parse_param(&mut self) -> Result<Param, Diag> {
@@ -417,6 +434,29 @@ impl<'p> Parser<'p> {
         Ok(Param { name, ty, span })
     }
 
+    // the bool in the error result is the likelihood of it being a incorrect mutation instead of a different expression
+    fn try_parse_mutation(&mut self) -> Result<Node, (Diag, bool)> {
+        // later: parse tuple items, array indices and struct fields
+        let (name, mut span) = self.expect_ident().map_err(|err| (err, false))?;
+        if let Some(Token { kind: TokenKind::Reassign(op), span: op_span }) = self.tokens.get(self.pos) {
+            self.advance();
+            let expr = self.parse_expression(0).map_err(|err| (err, true))?;
+            span = span.concat(&expr.span);
+            Ok(self.create_node(
+                NodeKind::Mutation {
+                    name,
+                    op: (*op, *op_span),
+                    expr: Box::new(expr)
+                },
+                span
+            ))
+        } else {
+            // error isn't read anyway
+            Err((Diag::error(), false))
+        }
+    }
+
+    // the bool in the error result is the likelihood of it being a incorrect variable declaration instead of a different expression
     fn try_parse_decl(&mut self) -> Result<Node, (Diag, bool)> {
         let (name, mut span) = self.expect_ident().map_err(|err| (err, false))?;
         if self.expect(TokenKind::Colon).is_ok() {
@@ -447,18 +487,6 @@ impl<'p> Parser<'p> {
             Ok(self.create_node(
                 NodeKind::ShortConstDecl {
                     name,
-                    expr: Box::new(expr)
-                },
-                span
-            ))
-        } else if let Some(Token { kind: TokenKind::Reassign(op), span: op_span }) = self.tokens.get(self.pos) {
-            self.advance();
-            let expr = self.parse_expression(0).map_err(|err| (err, true))?;
-            span = span.concat(&expr.span);
-            Ok(self.create_node(
-                NodeKind::Mutation {
-                    name,
-                    op: (*op, *op_span),
                     expr: Box::new(expr)
                 },
                 span

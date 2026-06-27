@@ -2,14 +2,15 @@ mod cli;
 mod common;
 mod lexer;
 mod parser;
-mod sema;
+mod ir;
 
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::ColorSpec;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self, Chars, Config, Styles};
 use colored::Colorize;
-use common::{Context, ContextMut};
+use common::Context;
+use std::path::PathBuf;
 use std::{env, fs};
 
 const STATUS: &'static str = "Pre-Alpha";
@@ -109,7 +110,8 @@ fn main() {
     let tokens = match lexer::tokenize(file_id, &contents, &mut rodeo) {
         Ok(o) => o,
         Err(err) => {
-            term::emit(&mut writer, &config, &files, &err).expect("Diagnostic formatting failed");
+            term::emit(&mut writer, &config, &files, &err)
+                .expect("Diagnostic formatting failed");
             return;
         }
     };
@@ -121,24 +123,25 @@ fn main() {
     let ast = match parser::Parser::new(&ctx, &tokens).parse() {
         Ok(o) => o,
         Err(err) => {
-            term::emit(&mut writer, &config, &files, &err).expect("Diagnostic formatting failed");
+            term::emit(&mut writer, &config, &files, &err)
+                .expect("Diagnostic formatting failed");
             return;
         }
-    };
-    
-    let mut ctx_mut = ContextMut {
-        rodeo: &mut rodeo,
-        source_id: file_id,
     };
 
-    let mut schecker = sema::SemaChecker::new(&mut ctx_mut);
-    match schecker.check(&ast) {
-        Ok(()) => (),
-        Err(errs) => {
-            for err in errs {
-                term::emit(&mut writer, &config, &files, &err).expect("Diagnostic formatting failed");
-            }
+    let module_name = PathBuf::from(&command.input).file_stem()
+        .unwrap()
+        .display()
+        .to_string();
+        
+    let mut codegen = ir::codegen::Codegen::new(&module_name, ctx);
+    let module = match codegen.generate(&ast) {
+        Ok(()) => codegen.module,
+        Err(err) => {
+            term::emit(&mut writer, &config, &files, &err)
+                .expect("Diagnostic formatting failed");
             return;
-        }
-    }
+        },
+    };
+    eprintln!("{module:?}");
 }

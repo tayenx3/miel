@@ -2,16 +2,16 @@ use crate::common::{Operator, ReassignmentOp, Span};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TokenKind<'tok> {
-    IntLit(i64), FloatLit(f64),
-    BoolLit(bool), StringLit(&'tok str),
+pub enum TokenKind {
+    IntLit(lasso::Spur), FloatLit(lasso::Spur),
+    BoolLit(bool), StringLit(lasso::Spur),
     Identifier(lasso::Spur),
     Operator(Operator),
     Reassign(ReassignmentOp),
     LParen, RParen, LCurly, RCurly,
     Colon, Comma,
     CColon, Walrus,
-    Semicolon,
+    Semicolon, Dot,
     KwCallable,
     KwNil,
     KwIf, KwThen, KwElse,
@@ -20,16 +20,13 @@ pub enum TokenKind<'tok> {
     KwBreak, KwContinue,
 }
 
-impl<'tok> TokenKind<'tok> {
+impl TokenKind {
     pub fn format(&self, rodeo: &lasso::Rodeo) -> String {
         match self {
-            Self::IntLit(i) => i.to_string(),
-            Self::FloatLit(i) => i.to_string(),
-            Self::BoolLit(i) => i.then(|| "true")
-                .unwrap_or("false")
-                .to_string(),
-            Self::StringLit(i) => format!("\"{i}\""),
-            Self::Identifier(s) => rodeo.resolve(s).to_string(),
+            Self::IntLit(s) | Self::FloatLit(s)
+            | Self::Identifier(s) => rodeo.resolve(s).to_string(),
+            Self::BoolLit(i) => if *i { "true" } else { "false" }.to_string(),
+            Self::StringLit(i) => format!("\"{}\"", rodeo.resolve(i)),
             Self::Operator(o) => o.to_string(),
             Self::Reassign(o) => o.to_string(),
             Self::LParen => "(".to_string(),
@@ -41,6 +38,7 @@ impl<'tok> TokenKind<'tok> {
             Self::CColon => "::".to_string(),
             Self::Walrus => ":=".to_string(),
             Self::Semicolon => ";".to_string(),
+            Self::Dot => ".".to_string(),
             Self::KwCallable => "callable".to_string(),
             Self::KwNil => "nil".to_string(),
             Self::KwIf => "if".to_string(),
@@ -56,19 +54,19 @@ impl<'tok> TokenKind<'tok> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Token<'tok> {
-    pub kind: TokenKind<'tok>,
+pub struct Token {
+    pub kind: TokenKind,
     pub span: Span
 }
 
-impl<'tok> Deref for Token<'tok> {
-    type Target = TokenKind<'tok>;
+impl Deref for Token {
+    type Target = TokenKind;
     fn deref(&self) -> &Self::Target {
         &self.kind
     }
 }
 
-impl<'tok> DerefMut for Token<'tok> {
+impl DerefMut for Token {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.kind
     }

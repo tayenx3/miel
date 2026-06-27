@@ -31,7 +31,7 @@ Humans are the only species that still try to fight while knowing their defeat i
 We build. We leap. And we're ruthless when it comes to learning.
 Because we're curious. **Because it wouldn't matter anyway.** Not to the sun. Not to the universe.
 
-Why not enjoy it? **For 4 or 5 more billion years. Why not enjoy it?**
+So why not enjoy it? **For 4 or 5 more billion years. Why not enjoy it?**
 
 Ultimately, Miel isn't supposed to be about building a fast compiler or an efficient optimizer. **It's about rekindling joy in developers.**
 

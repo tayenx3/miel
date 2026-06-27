@@ -1,9 +1,18 @@
-Main :: callable() {
+Foo :: callable(): int {
     i := 0;
     while i < 10 do {
-        if i == 5 then continue;
-        if i == 6 then break;
-        if i == 7 then return;
+        if i == 5 then continue
+        else if i == 6 then break
+        else if i == 7 then return 7;
         i += 1;
     };
+    if i >= 10 then 5
+    else i
+};
+
+Main :: callable(): i32 {
+    result := Foo();
+    if result == 10 then 0
+    else if result == 5 then 1
+    else 2
 };
