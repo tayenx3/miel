@@ -1,3 +1,5 @@
+//! Parser - Syntactic Analysis
+
 // todo: ADD TESTS!!!
 
 pub mod ast;
@@ -116,10 +118,22 @@ impl<'p> Parser<'p> {
             nodes.push(self.parse_statement()?);
         }
 
-        return Ok(Ast(nodes.into()))
+        Ok(Ast(nodes.into()))
     }
 
     fn parse_statement(&mut self) -> Result<Node, Diag> {
+        let prev_pos = self.pos;
+        let prev_node_id = self.next_node_id;
+        
+        match self.try_parse_decl() {
+            Ok(decl) => return Ok(decl),
+            Err((d, likelihood)) => if likelihood {
+                return Err(d);
+            }
+        }
+        self.pos = prev_pos;
+        self.next_node_id = prev_node_id;
+        
         let node = self.parse_expression(0)?;
         let span = node.span.concat(&self.expect(TokenKind::Semicolon)?.span);
         Ok(self.create_node(NodeKind::Semi(Box::new(node)), span))
@@ -130,15 +144,6 @@ impl<'p> Parser<'p> {
         let prev_node_id = self.next_node_id;
         
         match self.try_parse_mutation() {
-            Ok(decl) => return Ok(decl),
-            Err((d, likelihood)) => if likelihood {
-                return Err(d);
-            }
-        }
-        self.pos = prev_pos;
-        self.next_node_id = prev_node_id;
-        
-        match self.try_parse_decl() {
             Ok(decl) => return Ok(decl),
             Err((d, likelihood)) => if likelihood {
                 return Err(d);
@@ -237,7 +242,7 @@ impl<'p> Parser<'p> {
                 let span = tok.span.concat(&operand.span);
                 Ok(self.create_node(
                     NodeKind::UnaryOp {
-                        op: *op,
+                        op: (*op, tok.span),
                         operand: Box::new(operand)
                     },
                     span
@@ -465,7 +470,7 @@ impl<'p> Parser<'p> {
                 let expr = self.parse_expression(0).map_err(|err| (err, true))?;
                 span = span.concat(&expr.span);
                 Ok(self.create_node(
-                    NodeKind::ConstDecl {
+                    NodeKind::TypedConstDecl {
                         name, ty,
                         expr: Box::new(expr)
                     },

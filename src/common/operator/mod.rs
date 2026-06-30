@@ -1,6 +1,7 @@
 pub mod const_eval;
 
 use std::fmt;
+use crate::sema::constants::ConstValue;
 
 #[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +39,16 @@ impl Operator {
             Self::Plus | Self::Minus => 70,
             Self::Star | Self::Slash | Self::Modulo => 80,
             _ => 0, // prefix op
+        }
+    }
+
+    pub fn eval_infix(&self, lhs: &ConstValue, rhs: &ConstValue) -> Option<ConstValue> {
+        match (lhs, rhs) {
+            (ConstValue::Never, _) | (_, ConstValue::Never) => Some(ConstValue::Never),
+            (ConstValue::Int(l), ConstValue::Int(r)) => const_eval::eval_int(self, l, r),
+            (ConstValue::Float(l), ConstValue::Float(r)) => const_eval::eval_float(self, l, r),
+            (ConstValue::Bool(l), ConstValue::Bool(r)) => const_eval::eval_bool(self, l, r),
+            _ => None
         }
     }
 }

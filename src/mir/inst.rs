@@ -1,27 +1,28 @@
 use std::fmt;
 use crate::common::Span;
 use super::callable::*;
+use super::ty::MirType;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IrConstId(pub usize);
+pub struct MirConstId(pub usize);
 
-impl fmt::Debug for IrConstId {
+impl fmt::Debug for MirConstId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "co{}", self.0)
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub enum IrConstValue {
+pub enum MirConstValue {
     Int(lasso::Spur),
     Float(lasso::Spur),
     Bool(bool),
     Nil,
-    Tuple(Vec<IrConstValue>),
-    Callable(IrCallableId),
+    Tuple(Vec<MirConstValue>),
+    Callable(MirCallableId),
 }
 
-impl IrConstValue {
+impl MirConstValue {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
         match self {
             Self::Int(i) => format!("(int {})", rodeo.resolve(i)),
@@ -29,7 +30,7 @@ impl IrConstValue {
             Self::Bool(i) => format!("(bool {i})"),
             Self::Nil => "nil".to_string(),
             Self::Tuple(items) => {
-                let mut output = format!("(tuple");
+                let mut output = "(tuple".to_string();
                 for (idx, item) in items.iter().enumerate() {
                     if idx > 0 {
                         output.push('\n');
@@ -45,71 +46,76 @@ impl IrConstValue {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IrValue(pub usize);
+pub struct MirValue(pub usize);
 
-impl fmt::Debug for IrValue {
+impl fmt::Debug for MirValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "v{}", self.0)
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub enum IrExpr {
-    Const(IrConstValue),
-    Add(IrValue, IrValue),
-    Sub(IrValue, IrValue),
-    Mul(IrValue, IrValue),
-    Div(IrValue, IrValue),
-    Rem(IrValue, IrValue),
+pub enum MirExpr {
+    Const(MirConstValue),
+    IAdd(MirValue, MirValue),
+    ISub(MirValue, MirValue),
+    IMul(MirValue, MirValue),
+    SDiv(MirValue, MirValue),
+    UDiv(MirValue, MirValue),
+    SRem(MirValue, MirValue),
+    URem(MirValue, MirValue),
 }
 
-impl IrExpr {
+impl MirExpr {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
         match self {
             Self::Const(c) => format!("(const {})", c.fmt(rodeo, tabs + 1)),
-            Self::Add(l, r) => format!("(add {l:?} {r:?})"),
-            Self::Sub(l, r) => format!("(sub {l:?} {r:?})"),
-            Self::Mul(l, r) => format!("(mul {l:?} {r:?})"),
-            Self::Div(l, r) => format!("(div {l:?} {r:?})"),
-            Self::Rem(l, r) => format!("(rem {l:?} {r:?})"),
+            Self::IAdd(l, r) => format!("(iadd {l:?} {r:?})"),
+            Self::ISub(l, r) => format!("(isub {l:?} {r:?})"),
+            Self::IMul(l, r) => format!("(imul {l:?} {r:?})"),
+            Self::SDiv(l, r) => format!("(sdiv {l:?} {r:?})"),
+            Self::UDiv(l, r) => format!("(udiv {l:?} {r:?})"),
+            Self::SRem(l, r) => format!("(srem {l:?} {r:?})"),
+            Self::URem(l, r) => format!("(urem {l:?} {r:?})"),
         }
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub enum IrInstKind {
+pub enum MirInstKind {
     Set {
-        dst: IrValue,
-        expr: IrExpr,
+        dst: MirValue,
+        ty: MirType,
+        expr: MirExpr,
     },
 }
 
-impl IrInstKind {
+impl MirInstKind {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
         match self {
-            Self::Set { dst, expr } => format!("(= {dst:?} {})", expr.fmt(rodeo, tabs + 1)),
+            Self::Set { dst, ty, expr } => format!("(= {ty:?} {dst:?} {})", expr.fmt(rodeo, tabs + 1)),
         }
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub struct IrInst {
-    pub kind: IrInstKind,
+pub struct MirInst {
+    pub kind: MirInstKind,
     pub span: Span,
 }
 
-impl IrInst {
+impl MirInst {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
-        format!("{}", self.kind.fmt(rodeo, tabs + 1))
+        self.kind.fmt(rodeo, tabs + 1)
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub enum IrTerminalKind {
-    Ret(IrValue),
+pub enum MirTerminalKind {
+    Ret(MirValue),
 }
 
-impl IrTerminalKind {
+impl MirTerminalKind {
     pub fn fmt(&self) -> String {
         match self {
             Self::Ret(v) => format!("(ret {v:?})"),
@@ -118,13 +124,13 @@ impl IrTerminalKind {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct IrTerminal {
-    pub kind: IrTerminalKind,
+pub struct MirTerminal {
+    pub kind: MirTerminalKind,
     pub span: Span,
 }
 
-impl IrTerminal {
+impl MirTerminal {
     pub fn fmt(&self) -> String {
-        format!("{}", self.kind.fmt())
+        self.kind.fmt()
     }
 }

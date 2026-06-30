@@ -1,3 +1,5 @@
+//! CLI Args Parsing
+
 use std::env::Args;
 
 #[allow(unused)]

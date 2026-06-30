@@ -13,14 +13,14 @@ use crate::parser::ast::*;
 
 pub struct Codegen<'a> {
     ctx: Context<'a>,
-    pub module: IrModule<'a>,
+    pub module: MirModule<'a>,
 }
 
 impl<'a> Codegen<'a> {
     pub fn new(name: &str, ctx: Context<'a>) -> Self {
         Self {
             ctx: Context::clone(&ctx),
-            module: IrModule::new(name, ctx),
+            module: MirModule::new(name, ctx),
         }
     }
 
@@ -31,9 +31,6 @@ impl<'a> Codegen<'a> {
     fn collect_constant(&mut self, node: &Node) -> Result<(), Diag> {
         match &node.kind {
             NodeKind::Semi(stmt) => self.collect_constant(stmt),
-            NodeKind::ConstDecl { name, ty, expr } => {
-                Ok(())
-            },
             _ => Err(Diag::error()
                 .with_message("Expected root-level item")
                 .with_labels(vec![

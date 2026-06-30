@@ -1,25 +1,25 @@
 use std::fmt;
-use super::ty::IrType;
+use super::ty::MirType;
 use super::inst::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IrBlockId(pub usize);
+pub struct MirBlockId(pub usize);
 
-impl fmt::Debug for IrBlockId {
+impl fmt::Debug for MirBlockId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "b{}", self.0)
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub struct IrBlock {
-    pub id: IrBlockId,
-    pub params: Vec<(IrValue, IrType)>,
-    pub insts: Vec<IrInst>,
-    pub terminal: Option<IrTerminal>,
+pub struct MirBlock {
+    pub id: MirBlockId,
+    pub params: Vec<(MirValue, MirType)>,
+    pub insts: Vec<MirInst>,
+    pub terminal: Option<MirTerminal>,
 }
 
-impl IrBlock {
+impl MirBlock {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
         let mut f = format!("(block {:?} (", self.id);
         for (idx, (pr, pt)) in self.params.iter().enumerate() {

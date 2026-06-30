@@ -35,3 +35,9 @@ impl Span {
         }
     }
 }
+
+impl AsRef<Span> for Span {
+    fn as_ref(&self) -> &Span {
+        self
+    }
+}

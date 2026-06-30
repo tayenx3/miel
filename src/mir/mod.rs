@@ -1,3 +1,5 @@
+//! MIR - Miel Intermediate Representation (codenamed Honey)
+
 pub mod ty;
 pub mod inst;
 pub mod block;

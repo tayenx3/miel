@@ -1,3 +1,5 @@
+//! Lexer - Lexical Analysis
+
 // todo: ADD TESTS!!!
 
 pub mod token;
@@ -100,7 +102,7 @@ fn lex_str<'lex>(
     start: usize,
 ) -> Result<Token, Diag> {
     let mut end = start + 1;
-    while let Some((pos, ch)) = source_chars.next() {
+    for (pos, ch) in source_chars.by_ref() {
         end = pos + ch.len_utf8();
         if ch == '"' {
             return Ok(Token {
@@ -117,9 +119,9 @@ fn lex_str<'lex>(
         ]))
 }
 
-pub fn tokenize<'lex>(
+pub fn tokenize(
     source_id: usize,
-    source: &'lex str,
+    source: &str,
     rodeo: &mut lasso::Rodeo,
 ) -> Result<Vec<Token>, Diag> {
     let mut source_chars = source.char_indices().peekable();
@@ -129,7 +131,7 @@ pub fn tokenize<'lex>(
         match ch {
             ' ' | '\t' | '\n' | '\r' => continue,
             ';' => if let Some((_, ';')) = source_chars.peek() {
-                while let Some((_, ch)) = source_chars.next() {
+                for (_, ch) in source_chars.by_ref() {
                     if ch == '\n' { break }
                 }
             } else if let Some((_, '[')) = source_chars.peek() {

@@ -3,20 +3,20 @@ use std::fmt;
 use std::sync::Arc;
 use crate::common::Context;
 use super::callable::*;
-use super::inst::IrConstId;
-use super::builder::IrFunctionBuilder;
+use super::inst::MirConstId;
+use super::builder::MirFunctionBuilder;
 
-pub struct IrModule<'a> {
+pub struct MirModule<'a> {
     pub ctx: Context<'a>,
     name: Arc<str>,
-    callables: HashMap<IrCallableId, IrCallable>,
+    callables: HashMap<MirCallableId, MirCallable>,
     next_callable_id: usize,
-    constants: HashMap<IrConstId, IrCallable>,
-    constant_names: HashMap<lasso::Spur, IrConstId>,
+    constants: HashMap<MirConstId, MirCallable>,
+    constant_names: HashMap<lasso::Spur, MirConstId>,
     next_const_id: usize,
 }
 
-impl<'a> IrModule<'a> {
+impl<'a> MirModule<'a> {
     pub fn new<S: Into<Arc<str>>>(name: S, ctx: Context<'a>) -> Self {
         Self {
             ctx, name: name.into(),
@@ -28,20 +28,18 @@ impl<'a> IrModule<'a> {
         }
     }
 
-    pub fn define_callable(&mut self, fb: IrFunctionBuilder) -> IrCallableId {
-        let id = IrCallableId(self.next_const_id);
+    pub fn define_callable(&mut self, fb: MirFunctionBuilder) -> MirCallableId {
+        let id = MirCallableId(self.next_const_id);
         self.next_const_id += 1;
-        self.callables.insert(id, IrCallable {
+        self.callables.insert(id, MirCallable {
             sig: fb.sig,
-            blocks: fb.blocks.into_iter()
-                .map(|(_, b)| b)
-                .collect(),
+            blocks: fb.blocks.into_values().collect(),
         });
         id
     }
 
-    pub fn define_constant(&mut self, name: lasso::Spur, c: IrCallable) -> Option<IrConstId> {
-        let id = IrConstId(self.next_const_id);
+    pub fn define_constant(&mut self, name: lasso::Spur, c: MirCallable) -> Option<MirConstId> {
+        let id = MirConstId(self.next_const_id);
         self.next_const_id += 1;
         self.constants.insert(id, c);
         if self.constant_names.contains_key(&name) {
@@ -52,7 +50,7 @@ impl<'a> IrModule<'a> {
     }
 }
 
-impl<'a> fmt::Debug for IrModule<'a> {
+impl<'a> fmt::Debug for MirModule<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "(module {}", self.name)?;
         write!(f, "\n    (callables")?;

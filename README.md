@@ -5,7 +5,7 @@
 
 > **🚧 EARLY DEVELOPMENT 🚧:** Miel is in very early development. Syntax can change and documentation is nonexistent. Now is the perfect time to get involved to help Miel stabilize.
 
-A cozy, general-purpose programming language for creating provably safe and secure systems while maintaining ergonomics and practicality.
+Miel is a cozy, resource-oriented programming language for creating provably safe and secure systems while maintaining ergonomics and practicality.
 
 ```haskell
 cap Foo;

@@ -3,7 +3,7 @@ pub struct Context<'ctx> {
     pub source_id: usize
 }
 
-impl<'ctx> Clone for Context<'ctx> {
+impl Clone for Context<'_> {
     fn clone(&self) -> Self {
         Self {
             rodeo: self.rodeo,

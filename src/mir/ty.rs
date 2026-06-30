@@ -1,14 +1,14 @@
 use std::fmt;
 
 #[derive(Clone, PartialEq)]
-pub enum IrType {
+pub enum MirType {
     Nil,
     Int, I8, I16, I32, I64,
     UInt, U8, U16, U32, U64,
     Float, F32, F64,
 }
 
-impl fmt::Debug for IrType {
+impl fmt::Debug for MirType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Nil => write!(f, "nil"),

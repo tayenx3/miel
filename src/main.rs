@@ -2,7 +2,8 @@ mod cli;
 mod common;
 mod lexer;
 mod parser;
-mod ir;
+mod sema;
+mod mir;
 
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::ColorSpec;
@@ -13,7 +14,7 @@ use common::Context;
 use std::path::PathBuf;
 use std::{env, fs};
 
-const STATUS: &'static str = "Pre-Alpha";
+const STATUS: &str = "Pre-Alpha";
 
 fn print_version() {
     println!("Miel Language Compiler, Version {} {}", env!("CARGO_PKG_VERSION"), STATUS);
@@ -22,9 +23,9 @@ fn print_version() {
 
 fn print_help() {
     print_version();
-    println!("");
+    println!();
     println!("Usage: miel [OPTIONS] <INPUT>");
-    println!("");
+    println!();
     println!("Options:");
     println!("  -h, --help                Print this help message");
     println!("  -V, --version             Print version");
@@ -55,7 +56,7 @@ fn main() {
     let contents = match fs::read_to_string(&command.input) {
         Ok(o) => o,
         Err(err) => {
-            eprintln!("{}: {}", "error".red().bold().underline(), err.to_string());
+            eprintln!("{}: {err}", "error".red().bold().underline());
             return;
         }
     };
@@ -134,7 +135,7 @@ fn main() {
         .display()
         .to_string();
         
-    let mut codegen = ir::codegen::Codegen::new(&module_name, ctx);
+    let mut codegen = mir::codegen::Codegen::new(&module_name, ctx);
     let module = match codegen.generate(&ast) {
         Ok(()) => codegen.module,
         Err(err) => {

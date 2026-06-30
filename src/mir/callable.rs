@@ -1,23 +1,23 @@
 use std::fmt;
-use super::ty::IrType;
-use super::block::IrBlock;
+use super::ty::MirType;
+use super::block::MirBlock;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IrCallableId(pub usize);
+pub struct MirCallableId(pub usize);
 
-impl fmt::Debug for IrCallableId {
+impl fmt::Debug for MirCallableId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "ca{}", self.0)
     }
 }
 
 #[derive(Clone, PartialEq)]
-pub struct IrSignature {
-    pub params: Vec<IrType>,
-    pub return_: IrType,
+pub struct MirSignature {
+    pub params: Vec<MirType>,
+    pub return_: MirType,
 }
 
-impl fmt::Debug for IrSignature {
+impl fmt::Debug for MirSignature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "(")?;
         for (idx, param) in self.params.iter().enumerate() {
@@ -31,12 +31,12 @@ impl fmt::Debug for IrSignature {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct IrCallable {
-    pub sig: IrSignature,
-    pub blocks: Vec<IrBlock>,
+pub struct MirCallable {
+    pub sig: MirSignature,
+    pub blocks: Vec<MirBlock>,
 }
 
-impl IrCallable {
+impl MirCallable {
     pub fn fmt(&self, rodeo: &lasso::Rodeo, tabs: usize) -> String {
         let mut f = format!("(callable {:?}",  self.sig);
         for block in &self.blocks {
